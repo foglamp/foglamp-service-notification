@@ -15,14 +15,16 @@
 #include <notification_api.h>
 
 #define SERVICE_NAME  "FogLAMP Notification"
-#define NOTIFICATION_CATEGORY	  "NOTIFICATION"
+#define SERVICE_TYPE  "Notification"
 
 /**
  * The NotificationService class.
  */
-class NotificationService : public ServiceHandler {
+class NotificationService : public ServiceHandler
+{
 	public:
 		NotificationService(const std::string& name);
+		~NotificationService();
 		void 			start(std::string& coreAddress,
 					      unsigned short corePort);
 		void 			stop();
