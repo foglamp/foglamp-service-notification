@@ -193,7 +193,7 @@ void NotificationService::start(string& coreAddress,
 	
 
 		unsigned int retryCount = 0;
-		while (client->registerCategory(m_name) == false && ++retryCount < 10)
+		while (client->registerCategory(NOTIFICATION_CATEGORY) == false && ++retryCount < 10)
 		{
 			sleep(2 * retryCount);
 		}

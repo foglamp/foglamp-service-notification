@@ -14,8 +14,9 @@
 #include <service_handler.h>
 #include <notification_api.h>
 
-#define SERVICE_NAME  "FogLAMP Notification"
-#define SERVICE_TYPE  "Notification"
+#define SERVICE_NAME		"FogLAMP Notification"
+#define SERVICE_TYPE		"Notification"
+#define NOTIFICATION_CATEGORY	"NOTIFICATION"
 
 /**
  * The NotificationService class.
