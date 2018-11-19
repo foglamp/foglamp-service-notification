@@ -12,7 +12,6 @@
 
 #include <logger.h>
 #include <management_client.h>
-#include <plugin_manager.h>
 #include <rule_plugin.h>
 #include <delivery_plugin.h>
 

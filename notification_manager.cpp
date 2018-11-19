@@ -11,7 +11,6 @@
 #include <management_api.h>
 #include <management_client.h>
 #include <service_record.h>
-#include <plugin_manager.h>
 #include <plugin_api.h>
 #include <plugin.h>
 #include <logger.h>
@@ -181,16 +180,17 @@ bool NotificationManager::loadInstances()
 
 		if (ruleHandle && deliveryHandle)
 		{
+			// Create RulePlugin and DeliveryPlugin instances
+			RulePlugin* rule = new RulePlugin(rulePluginName,
+							  ruleHandle);
+			DeliveryPlugin* deliver = new DeliveryPlugin(deliveryPluginName,
+								     deliveryHandle);
 			// Get plugins default configuration
-			// Get plugin manager
-			PluginManager* pluginManager = PluginManager::getInstance();
-			string rulePluginConfig = pluginManager->getInfo(ruleHandle)->config;
-			string deliveryPluginConfig = pluginManager->getInfo(deliveryHandle)->config;
+			string rulePluginConfig = rule->getInfo()->config;
+			string deliveryPluginConfig = deliver->getInfo()->config;
 
 			// Create category names for plugins under instanceName
 			// with names: "rule" + instanceName, "delivery" + instanceName
-
-			// Ad a method for the following statememts
 			string ruleCategoryName = "rule" + instance.getName();
 			string deliveryCategoryName = "delivery" + instance.getName();
 
@@ -204,6 +204,8 @@ bool NotificationManager::loadInstances()
 				string errMsg("Cannot create/update '" + \
 					      ruleCategoryName + "' rule plugin category");
 				Logger::getLogger()->fatal(errMsg.c_str());
+				delete rule;
+				delete deliver;
 				throw runtime_error(errMsg);
 			}
 			if (!m_managerClient->addCategory(deliveryDefConfig, true))
@@ -211,6 +213,8 @@ bool NotificationManager::loadInstances()
 				string errMsg("Cannot create/update '" + \
 					      deliveryCategoryName + "' delivery plugin category");
 				Logger::getLogger()->fatal(errMsg.c_str());
+				delete rule;
+				delete deliver;
 				throw runtime_error(errMsg);
 			}
 
@@ -219,15 +223,10 @@ bool NotificationManager::loadInstances()
 			ConfigCategory ruleConfig = m_managerClient->getCategory(ruleCategoryName);
 			ConfigCategory deliveryConfig = m_managerClient->getCategory(deliveryCategoryName);
 
-			// Use pointers
-			// Call rule "plugin_init"
-			RulePlugin* rule = new RulePlugin(rulePluginName,
-							  ruleHandle);
+			// Call rule "plugin_init" with configuration
 			rule->init(ruleConfig);
 
-			// Call delivery "plugin_init"
-			DeliveryPlugin* deliver = new DeliveryPlugin(deliveryPluginName,
-								     deliveryHandle);
+			// Call delivery "plugin_init" with configuration
 			deliver->init(deliveryConfig);
 
 			// Add plugin category name under service/process config name
@@ -237,6 +236,7 @@ bool NotificationManager::loadInstances()
 			m_managerClient->addChildCategories(instance.getName(),
 							    children);
 
+			// Instantiate NotificationRule and NotificationDelivery classes
 			NotificationRule* theRule = new NotificationRule(ruleCategoryName,
 									 instance.getName(),
 									 rule);
@@ -244,6 +244,7 @@ bool NotificationManager::loadInstances()
 									 instance.getName(),
 									 deliver);
 
+			// Add the new instance
 			this->addInstance(instance.getName(),
 					  enabled,
 					  theRule,
