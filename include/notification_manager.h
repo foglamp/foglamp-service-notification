@@ -114,11 +114,7 @@ class NotificationManager
 		const std::string	m_name;
 		static NotificationManager*
 					m_instance;
-		Logger*			m_logger;
-		PluginManager*		m_pluginManager;
 		ManagementClient* 	m_managerClient;
-
-	public:
 		std::map<std::string, NotificationInstance *>
 					m_instances;
 };

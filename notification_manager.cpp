@@ -113,9 +113,6 @@ NotificationManager::NotificationManager(const string& serviceName,
 					 m_name(serviceName),
 					 m_managerClient(managerClient)
 {
-	// Get plugin manager
-	m_pluginManager = PluginManager::getInstance();
-
 	// Set instance
 	NotificationManager::m_instance = this;
 }
@@ -149,6 +146,7 @@ bool NotificationManager::loadInstances()
 
 	for (int i = 0; i < instances.length(); i++)
 	{
+		cerr << "Current instance is " << instances[i]->getName() << endl;
 		// Fetch instance configuration
 		ConfigCategory instance = m_managerClient->getCategory(instances[i]->getName());
 
@@ -162,16 +160,16 @@ bool NotificationManager::loadInstances()
 
 		if (enabled && rulePluginName.empty())
 		{
-			m_logger->error("Unable to fetch Notification Rule "
-					"plugin name from Notification instance '" + \
-					instance.getName() + "' configuration.");
+			Logger::getLogger()->error("Unable to fetch Notification Rule "
+						   "plugin name from Notification instance '" + \
+						   instance.getName() + "' configuration.");
 			return false;
 		}
 		if (enabled && deliveryPluginName.empty())
 		{
-			m_logger->error("Unable to fetch Notificvation Delivery "
-					"plugin name from Notification instance '" + \
-					instance.getName() + "' configuration");
+			Logger::getLogger()->error("Unable to fetch Notificvation Delivery "
+						   "plugin name from Notification instance '" + \
+						   instance.getName() + "' configuration");
 			return false;
 		}
 
@@ -184,8 +182,10 @@ bool NotificationManager::loadInstances()
 		if (ruleHandle && deliveryHandle)
 		{
 			// Get plugins default configuration
-			string rulePluginConfig = m_pluginManager->getInfo(ruleHandle)->config;
-			string deliveryPluginConfig = m_pluginManager->getInfo(deliveryHandle)->config;
+			// Get plugin manager
+			PluginManager* pluginManager = PluginManager::getInstance();
+			string rulePluginConfig = pluginManager->getInfo(ruleHandle)->config;
+			string deliveryPluginConfig = pluginManager->getInfo(deliveryHandle)->config;
 
 			// Create category names for plugins under instanceName
 			// with names: "rule" + instanceName, "delivery" + instanceName
@@ -248,7 +248,6 @@ bool NotificationManager::loadInstances()
 					  enabled,
 					  theRule,
 					  theDelivery);
-
 		}
 		else
 		{
