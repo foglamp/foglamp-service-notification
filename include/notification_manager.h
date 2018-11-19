@@ -23,7 +23,7 @@ class NotificationElement
 				    const std::string& notification);
 		~NotificationElement();
 		const std::string&	getName() const { return m_name; };
-		const std::string&	getNotificatioName() const { return m_notification; };
+		const std::string&	getNotificationName() const { return m_notification; };
 
 	private:
 		const std::string	m_name;
@@ -50,12 +50,15 @@ class NotificationDelivery : public NotificationElement
 	public:
 		NotificationDelivery(const std::string& name,
 				     const std::string& notification,
-				     DeliveryPlugin* plugin);
+				     DeliveryPlugin* plugin,
+				     const std::string& customText);
 		~NotificationDelivery();
 		DeliveryPlugin*		getPlugin() { return m_plugin; };
+		const std::string&	getText() const { return m_text; };
 
 	private:
 		DeliveryPlugin*		m_plugin;
+		std::string		m_text;
 };
 
 // NotificationInstance class

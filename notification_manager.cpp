@@ -56,9 +56,11 @@ NotificationRule::~NotificationRule()
 // NotificationDelivery constructor
 NotificationDelivery::NotificationDelivery(const std::string& name,
 				   const std::string& notification,
-				   DeliveryPlugin* plugin) :
+				   DeliveryPlugin* plugin,
+				   const std::string& customText) :
 				   NotificationElement(name, notification),
-				   m_plugin(plugin)
+				   m_plugin(plugin),
+				   m_text(customText)
 {
 }
 
@@ -145,7 +147,6 @@ bool NotificationManager::loadInstances()
 
 	for (int i = 0; i < instances.length(); i++)
 	{
-		cerr << "Current instance is " << instances[i]->getName() << endl;
 		// Fetch instance configuration
 		ConfigCategory instance = m_managerClient->getCategory(instances[i]->getName());
 
@@ -153,9 +154,15 @@ bool NotificationManager::loadInstances()
 		const string rulePluginName = instance.getValue("rule");
 		// Get delivery plugin to use
 		const string deliveryPluginName = instance.getValue("channel");
-
+		// Is enabled?
 		bool enabled = instance.getValue("enable").compare("true") == 0 ||
 			       instance.getValue("enable").compare("True") == 0;
+		// Get custom text message for delivery
+		string customText = "";
+		if (instance.itemExists("text"))
+		{
+			customText = instance.getValue("text");
+		}
 
 		if (enabled && rulePluginName.empty())
 		{
@@ -242,7 +249,8 @@ bool NotificationManager::loadInstances()
 									 rule);
 			NotificationDelivery* theDelivery = new NotificationDelivery(deliveryCategoryName,
 									 instance.getName(),
-									 deliver);
+									 deliver,
+									 customText);
 
 			// Add the new instance
 			this->addInstance(instance.getName(),
