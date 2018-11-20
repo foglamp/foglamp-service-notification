@@ -15,7 +15,6 @@
 #include <rule_plugin.h>
 #include <delivery_plugin.h>
 
-// Base Notification element class
 class NotificationElement
 {
 	public:
@@ -30,7 +29,6 @@ class NotificationElement
 		const std::string	m_notification;
 };
 
-// NotificationRule class
 class NotificationRule : public NotificationElement
 {
 	public:
@@ -44,7 +42,6 @@ class NotificationRule : public NotificationElement
 		RulePlugin*		m_plugin;
 };
 
-// NotificationDelivery class
 class NotificationDelivery : public NotificationElement
 {
 	public:
@@ -61,7 +58,6 @@ class NotificationDelivery : public NotificationElement
 		std::string		m_text;
 };
 
-// NotificationInstance class
 class NotificationInstance
 {
 	public:
@@ -87,9 +83,6 @@ class NotificationInstance
 		NotificationDelivery*	m_delivery;
 };
 
-/**
- * The NotificationManager class.
- */
 class NotificationManager
 {
 	public:
@@ -105,6 +98,8 @@ class NotificationManager
 		std::map<std::string, NotificationInstance *>&
 					getInstances() { return m_instances; };
 		NotificationInstance*	getNotificationInstance(const std::string& instanceName) const;
+		PLUGIN_HANDLE		loadRulePlugin(const string& rulePluginName);
+		PLUGIN_HANDLE		loadDeliveryPlugin(const string& deliveryPluginName);
 
 	private:
 		void			addInstance(const string& instanceName,

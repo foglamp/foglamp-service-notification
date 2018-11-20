@@ -24,7 +24,13 @@ using namespace std;
 
 NotificationManager* NotificationManager::m_instance = 0;
 
-// NotificationElement constructor
+/**
+ * NotificationElement constructor
+ *
+ * @param    name		Element name
+ * @param    notification	The notification name
+ *				this element belongs to.
+ */
 NotificationElement::NotificationElement(const std::string& name,
 					 const std::string& notification) :
 					 m_name(name),
@@ -32,12 +38,21 @@ NotificationElement::NotificationElement(const std::string& name,
 {
 }
 
-// NotificationElement destructor
+/**
+ * NotificationElement destructor
+ */
 NotificationElement::~NotificationElement()
 {
 }
 
-// NotificationRule constructor
+/**
+ * NotificationRule constructor
+ *
+ * @param   name		The notification rule name
+ * @param   notification	The notification instance name
+ *				for the rule name
+ * @param   plugin		The loaded rule plugin
+ */
 NotificationRule::NotificationRule(const std::string& name,
 				   const std::string& notification,
 				   RulePlugin* plugin) :
@@ -46,33 +61,51 @@ NotificationRule::NotificationRule(const std::string& name,
 {
 }
 
-// NotificationRule destructor
+/**
+ * NotificationRule destructor
+ */
 NotificationRule::~NotificationRule()
 {
+	// Free plugin resources
 	m_plugin->shutdown();
 	delete m_plugin;
 }
 
-// NotificationDelivery constructor
+/**
+ * NotificationDelivery constructor
+ *
+ * @param   name		The notification delivery name
+ * @param   notification	The notification instance name
+ *				for the delivery name
+ * @param   plugin		The loaded delivery plugin
+ */
 NotificationDelivery::NotificationDelivery(const std::string& name,
-				   const std::string& notification,
-				   DeliveryPlugin* plugin,
-				   const std::string& customText) :
-				   NotificationElement(name, notification),
-				   m_plugin(plugin),
-				   m_text(customText)
+					   const std::string& notification,
+					   DeliveryPlugin* plugin,
+					   const std::string& customText) :
+					   NotificationElement(name, notification),
+					   m_plugin(plugin),
+					   m_text(customText)
 {
 }
 
-// NotificationDelivery destructor
+/*
+ * NotificationDelivery destructor
+ */
 NotificationDelivery::~NotificationDelivery()
 {
+	// Free plugin resources
 	m_plugin->shutdown();
 	delete m_plugin;
 }
 
 /**
  * NotificationInstance constructor
+ *
+ * @param    name	The Notification instance name
+ * @param    enable	The notification is enabled or not
+ * @param    rule	The NotificationRule for this instance
+ * @param    delivery	The NotificationDelivery for this instance
  */
 NotificationInstance::NotificationInstance(const string& name,
 					   bool enable,
@@ -85,14 +118,20 @@ NotificationInstance::NotificationInstance(const string& name,
 {
 }
 
-// NotificationInstance destructor
+/**
+ * NotificationInstance destructor
+ */
 NotificationInstance::~NotificationInstance()
 {
 	delete m_rule;
 	delete m_delivery;
 }
 
-// Return JSON string of NotificationInstance object
+/**
+ * Return JSON string of NotificationInstance object
+ *
+ * @return	A JSON string representation of the instance
+ */
 string NotificationInstance::toJSON()
 {
 	ostringstream ret;
@@ -108,6 +147,9 @@ string NotificationInstance::toJSON()
 }
 /**
  * Constructor for the NotificationManager class
+ *
+ * @param    serviceName	Notification service name
+ * @param    managerClient	Pointer to ManagementClient
  */
 NotificationManager::NotificationManager(const string& serviceName,
 					 ManagementClient* managerClient) :
@@ -118,10 +160,12 @@ NotificationManager::NotificationManager(const string& serviceName,
 	NotificationManager::m_instance = this;
 }
 
-// NotificationManager destructor
+/**
+ * NotificationManager destructor
+ */
 NotificationManager::~NotificationManager()
 {
-	// delete each element in m_instances, if dynamically allocated
+	// Delete each element in m_instances
 	for (auto it = m_instances.begin();
 		  it != m_instances.end();
 		  ++it)
@@ -140,6 +184,12 @@ NotificationManager* NotificationManager::getInstance()
 	return m_instance;
 }
 
+/**
+ * Load all notification instances found in "Notifications" FogLAMP category.
+ *
+ * @return			True on success, false otherwise.
+ * @throw runtime_error		On fatal errors.
+ */
 bool NotificationManager::loadInstances()
 {
 	// Get child categories of "Notifications"
@@ -147,6 +197,7 @@ bool NotificationManager::loadInstances()
 
 	for (int i = 0; i < instances.length(); i++)
 	{
+		cerr << "Current instance is " << instances[i]->getName() << endl;
 		// Fetch instance configuration
 		ConfigCategory instance = m_managerClient->getCategory(instances[i]->getName());
 
@@ -182,8 +233,9 @@ bool NotificationManager::loadInstances()
 		// Load plugins
 		PLUGIN_HANDLE ruleHandle;
 		PLUGIN_HANDLE deliveryHandle;
-		ruleHandle = RulePlugin::loadPlugin(rulePluginName);
-		deliveryHandle = DeliveryPlugin::loadPlugin(deliveryPluginName);
+
+		ruleHandle = this->loadRulePlugin(rulePluginName);
+		deliveryHandle = this->loadDeliveryPlugin(deliveryPluginName);
 
 		if (ruleHandle && deliveryHandle)
 		{
@@ -248,9 +300,9 @@ bool NotificationManager::loadInstances()
 									 instance.getName(),
 									 rule);
 			NotificationDelivery* theDelivery = new NotificationDelivery(deliveryCategoryName,
-									 instance.getName(),
-									 deliver,
-									 customText);
+										     instance.getName(),
+										     deliver,
+										     customText);
 
 			// Add the new instance
 			this->addInstance(instance.getName(),
@@ -266,10 +318,17 @@ bool NotificationManager::loadInstances()
 					  NULL);
 		}
 	}
+
+	return true;
 }
 
 /**
  * Add an instance to the current instances
+ *
+ * @param    instanceName	The instance name
+ * @param    enabled		Is enabled or not
+ * @param    rule		Pointer to the associated NotificationRule
+ * @param    delivery		Pointer to the ssociated NotificationDelivery
  */
 void NotificationManager::addInstance(const string& instanceName,
 				      bool enabled,
@@ -331,4 +390,69 @@ NotificationManager::getNotificationInstance(const std::string& instanceName) co
 	{
 		return NULL;
 	}
+}
+
+/**
+ * Load a rule plugin
+ * 
+ * @param    rulePluginName	The rule plugin to load
+ * @return			Plugin handle on success, NULL otherwise 
+ *
+ */
+PLUGIN_HANDLE NotificationManager::loadRulePlugin(const string& rulePluginName)
+{
+	if (rulePluginName.empty())
+	{
+		Logger::getLogger()->error("Unable to fetch rule plugin '%s' from configuration.",
+					   rulePluginName.c_str());
+		// Failure
+		return NULL;
+	}
+
+	Logger::getLogger()->info("Loading rule plugin '%s'.",
+				  rulePluginName.c_str());
+
+	PluginManager* manager = PluginManager::getInstance();
+	PLUGIN_HANDLE handle;
+	if ((handle = manager->loadPlugin(rulePluginName,
+					  PLUGIN_TYPE_NOTIFICATION_RULE)) != NULL)
+	{
+		// Suceess
+		Logger::getLogger()->info("Loaded rule plugin '%s'.",
+					  rulePluginName.c_str());
+	}
+	return handle;
+}
+
+/**
+ * Load a delivery plugin
+ * 
+ * @param    deliveryPluginName		The delivery plugin to load
+ * @return				Plugin handle on success, NULL otherwise 
+ *
+ */
+PLUGIN_HANDLE NotificationManager::loadDeliveryPlugin(const string& loadDeliveryPlugin)
+{
+	if (loadDeliveryPlugin.empty())
+	{
+		Logger::getLogger()->error("Unable to fetch delivery plugin "
+					   "'%s' from configuration.",
+					   loadDeliveryPlugin.c_str());
+		// Failure
+		return NULL;
+	}
+
+	Logger::getLogger()->info("Loading delivery plugin '%s'.",
+				  loadDeliveryPlugin.c_str());
+
+	PluginManager* manager = PluginManager::getInstance();
+	PLUGIN_HANDLE handle;
+	if ((handle = manager->loadPlugin(loadDeliveryPlugin,
+					  PLUGIN_TYPE_NOTIFICATION_DELIVERY)) != NULL)
+        {
+		// Suceess
+		Logger::getLogger()->info("Loaded delivery plugin '%s'.",
+					  loadDeliveryPlugin.c_str());
+	}
+	return handle;
 }
