@@ -129,7 +129,9 @@ NotificationService::NotificationService(const string& myName) : m_name(myName),
 	m_api = new NotificationApi(servicePort, threads);
 }
 
-// Destructor
+/**
+ * Destructor
+ */
 NotificationService::~NotificationService()
 {
 	delete m_api;
@@ -210,7 +212,7 @@ void NotificationService::start(string& coreAddress,
 		m_api->wait();
 	}
 
-	m_logger->info("Notification service [" + m_name + " shutdown completed.");
+	m_logger->info("Notification service [" + m_name + "] shutdown completed.");
 }
 
 /**

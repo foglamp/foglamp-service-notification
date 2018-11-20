@@ -32,6 +32,9 @@ void notificationReceiveWrapper(shared_ptr<HttpServer::Response> response,
 
 /**
  * Construct the singleton Notification API 
+ *
+ * @param    port	Listening port (0 = automatically set)
+ * @param    threads	Thread pool size of HTTP server
  */
 NotificationApi::NotificationApi(const unsigned short port,
 				 const unsigned int threads)
@@ -66,28 +69,38 @@ NotificationApi* NotificationApi::getInstance()
 
 /**
  * Return the current listener port
+ * @return	The current listener port
  */
 unsigned short NotificationApi::getListenerPort()
 {
 	return m_server->getLocalPort();
 }
 
+/**
+ * Method for HTTP server, called by a dedicated thread
+ */
 void startService()
 {
 	NotificationApi::getInstance()->startServer();
 }
 
 /**
- * Start the HTTP server
+ * Start the thread for HTTP server 
  */
 void NotificationApi::start() {
 	m_thread = new thread(startService);
 }
 
+/**
+ * Start method for HTTP server
+ */
 void NotificationApi::startServer() {
 	m_server->start();
 }
 
+/**
+ * Stop method for HTTP server
+ */
 void NotificationApi::stopServer() {
 	m_server->stop();
 }
@@ -110,6 +123,9 @@ void NotificationApi::initResources()
 
 /**
  * Handle a exception by sendign back an internal error
+ *
+ * @param response	The response stream to send the response on
+ * @param request	The HTTP request
  */
 void NotificationApi::internalError(shared_ptr<HttpServer::Response> response,
 				    const exception& ex)
@@ -162,7 +178,9 @@ void NotificationApi::respond(shared_ptr<HttpServer::Response> response,
 /**
  * Add data provided in the payload of callback API call
  * into the notification queue.
- *
+ * 
+ * This is called by the storage service when new data arrives
+ * for an asset in which we have registered an interest.
  *
  * @param response	The response stream to send the response on
  * @param request	The HTTP request
