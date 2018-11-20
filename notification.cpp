@@ -65,6 +65,8 @@ int main(int argc, char *argv[])
 	// Start the Notification service
 	service->start(coreAddress, corePort);
 
+	delete service;
+
 	return 0;
 }
 
@@ -128,6 +130,14 @@ NotificationService::NotificationService(const string& myName) : m_name(myName),
 }
 
 /**
+ * Destructor
+ */
+NotificationService::~NotificationService()
+{
+	delete m_api;
+}
+
+/**
  * Start the notification service
  * by connecting to FogLAMP core service.
  *
@@ -137,7 +147,7 @@ NotificationService::NotificationService(const string& myName) : m_name(myName),
 void NotificationService::start(string& coreAddress,
 				unsigned short corePort)
 {
-	m_logger->info("Starting service...");
+	m_logger->info("Starting Notification service " + m_name +  " ...");
 
 	// Start the NotificationApi on service port
 	// Dynamic port
@@ -149,11 +159,22 @@ void NotificationService::start(string& coreAddress,
 	// Start the NotificationApi on service port
 	m_api->start();
 
+	// Enable http API methods
+	m_api->initResources();
+
 	// Allow time for the listeners to start before we register
 	sleep(1);
 
 	if (!m_shutdown)
 	{
+		// Get management client
+		ManagementClient *client = new ManagementClient(coreAddress, corePort);
+
+		// Create an empty Notification category if one doesn't exist
+		DefaultConfigCategory notificationConfig(string("Notifications"), string("{}"));
+		notificationConfig.setDescription("Notification services");
+		client->addCategory(notificationConfig, true);
+
 		unsigned short listenerPort = m_api->getListenerPort();
 		unsigned short managementListener = management.getListenerPort();
 
@@ -165,8 +186,13 @@ void NotificationService::start(string& coreAddress,
 				     listenerPort,
 				     managementListener);
 
-		ManagementClient *client = new ManagementClient(coreAddress, corePort);
-		client->registerService(record);
+		if (!client->registerService(record))
+		{
+			delete client;
+			delete m_api;
+			return;
+		}
+	
 
 		unsigned int retryCount = 0;
 		while (client->registerCategory(NOTIFICATION_CATEGORY) == false && ++retryCount < 10)
@@ -186,7 +212,7 @@ void NotificationService::start(string& coreAddress,
 		m_api->wait();
 	}
 
-	m_logger->info("Notification service shut down.");
+	m_logger->info("Notification service [" + m_name + "] shutdown completed.");
 }
 
 /**

@@ -14,12 +14,18 @@
 
 using namespace std;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
+/*
+ * URL for each API entry point
+ */
+#define RECEIVE_NOTIFICATION	"^/notification/reading/asset/([A-Za-z][a-zA-Z0-9_]*)$"
+#define ASSET_NAME_COMPONENT	1
 
-class NotificationApi {
+class NotificationApi
+{
 	public:
 		NotificationApi(const unsigned short port,
 				const unsigned int threads);
-		~NotificationApi() {};
+		~NotificationApi();
 		static		NotificationApi *getInstance();
 		void		initResources();
 		void		start();
@@ -27,6 +33,19 @@ class NotificationApi {
 		void		wait();
 		void		stopServer();
 		unsigned short	getListenerPort();
+		void		processCallback(shared_ptr<HttpServer::Response> response,
+						shared_ptr<HttpServer::Request> request);
+	private:
+		void		internalError(shared_ptr<HttpServer::Response>,
+					      const exception&);
+		void		respond(shared_ptr<HttpServer::Response>,
+					const string&);
+		void		respond(shared_ptr<HttpServer::Response>,
+					SimpleWeb::StatusCode,
+				const string&);
+		bool		queueNotification(const string& assetName,
+						  const string& payload);
+
 
 	private:
 		static NotificationApi*		m_instance;
