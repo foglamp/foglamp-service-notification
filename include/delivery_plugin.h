@@ -28,12 +28,18 @@ class DeliveryPlugin : public Plugin
 		void			shutdown();
 		bool			persistData() { return info->options & SP_PERSIST_DATA; };
 		void			start();
-		bool			deliver(const std::string message);
+		bool			deliver(const std::string& deliveryName,
+						const std::string& notificationName,
+						const std::string& triggerReason,
+						const std::string& customText);
 
 	private:
 		PLUGIN_HANDLE		(*pluginInit)(const ConfigCategory* config);
 		void			(*pluginShutdownPtr)(PLUGIN_HANDLE);
 		bool			(*pluginDeliverPtr)(PLUGIN_HANDLE,
+							    const std::string&,
+							    const std::string&,
+							    const std::string&,
 							    const std::string&);
 
 	public:
