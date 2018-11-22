@@ -25,7 +25,11 @@ DeliveryPlugin::DeliveryPlugin(const std::string& name,
 	pluginShutdownPtr = (void (*)(PLUGIN_HANDLE))
 				      manager->resolveSymbol(handle,
 							     "plugin_shutdown");
+
 	pluginDeliverPtr = (bool (*)(const PLUGIN_HANDLE,
+				     const string& deliveryName,
+				     const string& notificationName,
+				     const string& triggerReason,
 				     const string& message))
 				     manager->resolveSymbol(handle,
 							    "plugin_deliver");
@@ -57,12 +61,30 @@ void DeliveryPlugin::shutdown()
 	}
 }
 
-bool DeliveryPlugin::deliver(const std::string message)
+/**
+ * Call the loaded plugin "plugin_deliver" method
+ *
+ * @param    deliveryName	The category name associated to the plugin.
+ * @param    notificationName	The notification name this delivery plugin
+ *				instance belongs to.
+ * @param    triggerReason	A JSON string with the related
+ *				triggered rule reason.
+ * @param    message		A custom text message.
+ * @return			True on success, false otherwise.
+ */
+bool DeliveryPlugin::deliver(const std::string& deliveryName,
+			     const std::string& notificationName,
+			     const std::string& triggerReason,
+			     const std::string& message)
 {
 	bool ret = false;
 	if (this->pluginDeliverPtr)
 	{
-		ret = this->pluginDeliverPtr(m_instance, message);
+		ret = this->pluginDeliverPtr(m_instance,
+					     deliveryName,
+					     notificationName,
+					     triggerReason,
+					     message);
 	}
 	return ret;
 }
