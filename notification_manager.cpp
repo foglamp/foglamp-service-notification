@@ -19,6 +19,7 @@
 #include <notification_manager.h>
 #include <rule_plugin.h>
 #include <delivery_plugin.h>
+#include <string.h>
 
 using namespace std;
 
@@ -104,15 +105,19 @@ NotificationDelivery::~NotificationDelivery()
  *
  * @param    name	The Notification instance name
  * @param    enable	The notification is enabled or not
+ * @param    type	Notification type:
+ *			"one shot", "retriggered", "toggled"
  * @param    rule	The NotificationRule for this instance
  * @param    delivery	The NotificationDelivery for this instance
  */
 NotificationInstance::NotificationInstance(const string& name,
 					   bool enable,
+					   NotificationType type,
 					   NotificationRule* rule,	
 					   NotificationDelivery* delivery) :
 					   m_name(name),
 					   m_enable(enable),
+					   m_type(type),
 					   m_rule(rule),
 					   m_delivery(delivery)
 {
@@ -137,7 +142,9 @@ string NotificationInstance::toJSON()
 	ostringstream ret;
 
 	ret << "{\"name\": \"" << this->getName() << "\", \"enable\": ";
-	ret << (this->isEnabled() ? "true" : "false") << ", \"rule\": \"";
+	ret << (this->isEnabled() ? "true" : "false") << ", ";
+	ret << "\"type\": \"" << this->getTypeString(this->getType()) << "\", ";
+	ret << "\"rule\": \"";
 	ret << (this->getRulePlugin() ? this->getRulePlugin()->getName() : "");
 	ret << "\", \"delivery\": \"";
 	ret << (this->getDeliveryPlugin() ? this->getDeliveryPlugin()->getName() : "");
@@ -208,6 +215,30 @@ bool NotificationManager::loadInstances()
 		// Is enabled?
 		bool enabled = instance.getValue("enable").compare("true") == 0 ||
 			       instance.getValue("enable").compare("True") == 0;
+		// Get notification type
+		string notification_type;
+		if (instance.itemExists("type") &&
+		    !instance.getValue("type").empty())
+		{
+			notification_type = instance.getValue("type");
+		}
+		else
+		{
+			Logger::getLogger()->fatal("Unable to fetch Notification type "
+						   "in Notification instance '" + \
+						   instance.getName() + "' configuration.");
+			return false;
+		}
+		NOTIFICATION_TYPE type = this->parseType(notification_type);
+		if (type == NOTIFICATION_TYPE::None)
+		{
+			Logger::getLogger()->fatal("Found unsupported Notification type '" + \
+						   notification_type + \
+						   "' in Notification instance '" + \
+						   instance.getName() + "' configuration.");
+			return false;
+		}
+
 		// Get custom text message for delivery
 		string customText = "";
 		if (instance.itemExists("text"))
@@ -217,14 +248,14 @@ bool NotificationManager::loadInstances()
 
 		if (enabled && rulePluginName.empty())
 		{
-			Logger::getLogger()->error("Unable to fetch Notification Rule "
+			Logger::getLogger()->fatal("Unable to fetch Notification Rule "
 						   "plugin name from Notification instance '" + \
 						   instance.getName() + "' configuration.");
 			return false;
 		}
 		if (enabled && deliveryPluginName.empty())
 		{
-			Logger::getLogger()->error("Unable to fetch Notificvation Delivery "
+			Logger::getLogger()->fatal("Unable to fetch Notificvation Delivery "
 						   "plugin name from Notification instance '" + \
 						   instance.getName() + "' configuration");
 			return false;
@@ -307,6 +338,7 @@ bool NotificationManager::loadInstances()
 			// Add the new instance
 			this->addInstance(instance.getName(),
 					  enabled,
+					  type,
 					  theRule,
 					  theDelivery);
 		}
@@ -314,6 +346,7 @@ bool NotificationManager::loadInstances()
 		{
 			this->addInstance(instance.getName(),
 					  enabled,
+					  type,
 					  NULL,
 					  NULL);
 		}
@@ -332,6 +365,7 @@ bool NotificationManager::loadInstances()
  */
 void NotificationManager::addInstance(const string& instanceName,
 				      bool enabled,
+				      NOTIFICATION_TYPE type,
 				      NotificationRule* rule,
 				      NotificationDelivery* delivery)
 {
@@ -344,6 +378,7 @@ void NotificationManager::addInstance(const string& instanceName,
 		// Add it
 		NotificationInstance* instance = new NotificationInstance(instanceName,
 									  enabled,
+									  type,
 									  rule,
 									  delivery);
 		m_instances[instanceName] = instance;
@@ -455,4 +490,62 @@ PLUGIN_HANDLE NotificationManager::loadDeliveryPlugin(const string& loadDelivery
 					  loadDeliveryPlugin.c_str());
 	}
 	return handle;
+}
+
+/**
+ * Parse the Notification type string
+ *
+ * @param    type	The notification type:
+ *			"one shot", "retriggered", "toggled"
+ * @return		The NotificationType value
+ */
+NOTIFICATION_TYPE NotificationManager::parseType(const string& type)
+{
+	NOTIFICATION_TYPE ret;
+	const char* ptrType = type.c_str();
+
+	if (strcasecmp(ptrType, "one shot") == 0 ||
+	    strcasecmp(ptrType, "oneshot") == 0)
+	{
+		ret = NOTIFICATION_TYPE::OneShot;
+	}
+	else if (strcasecmp(ptrType, "toggled") == 0)
+	{
+		ret = NOTIFICATION_TYPE::Toggled;
+	}
+	else if (strcasecmp(ptrType, "retriggered") == 0)
+	{
+		ret = NOTIFICATION_TYPE::Retriggered;
+	}
+	else
+	{
+		ret = NOTIFICATION_TYPE::None;
+	}
+	return ret;
+}
+
+/**
+ * Return string value of NotificationType enum
+ *
+ * @param    type	The NotificationType value
+ * @return		String value of NotificationType value
+ */
+string NotificationInstance::getTypeString(NOTIFICATION_TYPE type)
+{
+	string ret = "";
+	switch (type)
+	{
+		case NOTIFICATION_TYPE::OneShot:
+			ret = "One Shot";	
+			break;
+		case NOTIFICATION_TYPE::Toggled:
+			ret = "Toggled";
+			break;
+		case NOTIFICATION_TYPE::Retriggered:
+			ret = "Retriggered";
+			break;
+		default:
+			break;
+	}
+	return ret;
 }
