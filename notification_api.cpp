@@ -13,7 +13,6 @@
 #include "management_api.h"
 #include "logger.h"
 #include "notification_manager.h"
-//#include "notification_subscription.h"
 #include "notification_queue.h"
 
 
