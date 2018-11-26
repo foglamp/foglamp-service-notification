@@ -61,8 +61,10 @@ class NotificationDelivery : public NotificationElement
 class NotificationInstance
 {
 	public:
+		enum NotificationType { None, OneShot, Retriggered, Toggled };
 		NotificationInstance(const std::string& name,
 				     bool enable,
+				     NotificationType type,
 				     NotificationRule* rule,
 				     NotificationDelivery* delivery);
 
@@ -71,17 +73,28 @@ class NotificationInstance
 		const std::string&	getName() const { return m_name; };
 		NotificationRule*	getRule() const { return m_rule; };
 		NotificationDelivery*	getDelivery() const { return m_delivery; };
-		RulePlugin*		getRulePlugin() const { return (m_rule ? m_rule->getPlugin() : NULL); };
-		DeliveryPlugin*		getDeliveryPlugin() const { return (m_delivery ? m_delivery->getPlugin() : NULL); };
+		RulePlugin*		getRulePlugin() const
+		{
+			return (m_rule ? m_rule->getPlugin() : NULL);
+		};
+		DeliveryPlugin*		getDeliveryPlugin() const
+		{
+			return (m_delivery ? m_delivery->getPlugin() : NULL);
+		};
 		string			toJSON();
 		bool			isEnabled() const { return m_enable; };
+		NotificationType	getType() const { return m_type; };
+		string			getTypeString(NotificationType type);
 
 	private:
 		const std::string	m_name;
 		bool			m_enable;
+		NotificationType	m_type;
 		NotificationRule*	m_rule;
 		NotificationDelivery*	m_delivery;
 };
+
+typedef NotificationInstance::NotificationType NOTIFICATION_TYPE;
 
 class NotificationManager
 {
@@ -100,10 +113,12 @@ class NotificationManager
 		NotificationInstance*	getNotificationInstance(const std::string& instanceName) const;
 		PLUGIN_HANDLE		loadRulePlugin(const string& rulePluginName);
 		PLUGIN_HANDLE		loadDeliveryPlugin(const string& deliveryPluginName);
+		NOTIFICATION_TYPE	parseType(const string& type);
 
 	private:
 		void			addInstance(const string& instanceName,
 						    bool enable,
+						    NOTIFICATION_TYPE type,
 						    NotificationRule* rule,
 						    NotificationDelivery* delivery);
 
