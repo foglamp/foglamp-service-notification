@@ -1,5 +1,5 @@
 /*
- * FogLAMP notification service.
+ * FogLAMP Notification API class for Notification micro service.
  *
  * Copyright (c) 2018 Dianomic Systems
  *
@@ -12,6 +12,9 @@
 #include "notification_api.h"
 #include "management_api.h"
 #include "logger.h"
+#include "notification_manager.h"
+//#include "notification_subscription.h"
+#include "notification_queue.h"
 
 
 NotificationApi* NotificationApi::m_instance = 0;
@@ -22,6 +25,9 @@ using HttpClient = SimpleWeb::Client<SimpleWeb::HTTP>;
 
 /**
  * Wrapper function for the notification POST callback API call.
+ *
+ * @param response	The response stream to send the response on
+ * @param request	The HTTP request
  */
 void notificationReceiveWrapper(shared_ptr<HttpServer::Response> response,
 				shared_ptr<HttpServer::Request> request)
@@ -31,7 +37,20 @@ void notificationReceiveWrapper(shared_ptr<HttpServer::Response> response,
 }
 
 /**
- * Construct the singleton Notification API 
+ * Wrapper for GET /notification
+ * Reply to caller with a JSON string of all loaded Notification instances
+ *
+ * @param response	The response stream to send the response on
+ * @param request	The HTTP request
+ */
+void notificationGetInstances(shared_ptr<HttpServer::Response> response,
+			      shared_ptr<HttpServer::Request> request)
+{
+	NotificationApi* api = NotificationApi::getInstance();
+	api->getInstances(response, request);
+}
+/**
+ * Construct the singleton Notification API
  *
  * @param    port	Listening port (0 = automatically set)
  * @param    threads	Thread pool size of HTTP server
@@ -44,6 +63,9 @@ NotificationApi::NotificationApi(const unsigned short port,
 	m_server = new HttpServer();
 	m_server->config.port = port;
 	m_server->config.thread_pool_size = threads;
+	m_thread = NULL;
+	m_callBackURL = "";
+
 	NotificationApi::m_instance = this;
 }
 
@@ -52,9 +74,13 @@ NotificationApi::NotificationApi(const unsigned short port,
  */
 NotificationApi::~NotificationApi()
 {
-	delete m_thread;
+	this->stopServer();
+	m_thread->join();
+
 	delete m_server;
+	delete m_thread;
 }
+
 /**
  * Return the singleton instance of the NotificationAPI class
  */
@@ -69,6 +95,7 @@ NotificationApi* NotificationApi::getInstance()
 
 /**
  * Return the current listener port
+ *
  * @return	The current listener port
  */
 unsigned short NotificationApi::getListenerPort()
@@ -85,7 +112,7 @@ void startService()
 }
 
 /**
- * Start the thread for HTTP server 
+ * Start the HTTP server
  */
 void NotificationApi::start() {
 	m_thread = new thread(startService);
@@ -106,6 +133,13 @@ void NotificationApi::stopServer() {
 }
 
 /**
+ * API stop entery poiunt
+ */
+void NotificationApi::stop()
+{
+	this->stopServer();
+}
+/**
  * Wait for the HTTP server to shutdown
  */
 void NotificationApi::wait() {
@@ -119,13 +153,15 @@ void NotificationApi::wait() {
 void NotificationApi::initResources()
 {       
 	m_server->resource[RECEIVE_NOTIFICATION]["POST"] = notificationReceiveWrapper;
+	m_server->resource[GET_NOTIFICATION_INSTANCES]["GET"] = notificationGetInstances;
 }
 
 /**
  * Handle a exception by sendign back an internal error
  *
- * @param response	The response stream to send the response on
- * @param request	The HTTP request
+  *
+ * @param response	The response stream to send the response on.
+ * @param ex		The current exception caught.
  */
 void NotificationApi::internalError(shared_ptr<HttpServer::Response> response,
 				    const exception& ex)
@@ -227,5 +263,70 @@ void NotificationApi::processCallback(shared_ptr<HttpServer::Response> response,
 bool NotificationApi::queueNotification(const string& assetName,
 					const string& payload)
 {
-	return true;
+	ReadingSet* readings = NULL;
+	try
+	{
+		readings = new ReadingSet(payload);
+	}
+	catch (exception* ex)
+	{
+		Logger::getLogger()->error("Exception '" + string(ex->what()) + \
+					   "' while parsing readigns for asset '" + \
+					   assetName + "'" );
+		delete ex;
+		return false;
+	}
+	catch (...)
+	{
+		std::exception_ptr p = std::current_exception();
+		string name = (p ? p.__cxa_exception_type()->name() : "null");
+		Logger::getLogger()->error("Exception '" + name + \
+					   "' while parsing readigns for asset '" + \
+					   assetName  + "'" );
+		return false;
+	}
+
+	NotificationQueue* queue = NotificationQueue::getInstance();
+	NotificationQueueElement* item =  new NotificationQueueElement(assetName, readings);
+
+	// Add element to the queue
+	return queue->addElement(item);
+}
+
+/**
+ * Return JSON string of all loaded instances
+ * @param response	The response stream to send the response on
+ * @param request	The HTTP request
+ */
+void NotificationApi::getInstances(shared_ptr<HttpServer::Response> response,
+				   shared_ptr<HttpServer::Request> request)
+{
+	string responsePayload;
+	// Get NotificationManager instance
+	NotificationManager* manager = NotificationManager::getInstance();
+	if (manager)
+	{
+		// Get all Notification instances
+		responsePayload = "{ \"notifications\": [" + manager->getJSONInstances()  + "] }";
+		this->respond(response,
+			      responsePayload);
+	}
+	else
+	{
+		responsePayload = "{ \"error\": \"NotificationManager not yet available.\" }";
+		this->respond(response,
+			      SimpleWeb::StatusCode::server_error_internal_server_error,
+			      responsePayload);
+	}
+}
+
+/**
+ * Set the callBack URL prefix for Notification callbacks.
+ */
+void NotificationApi::setCallBackURL()
+{
+	unsigned short apiPort =  this->getListenerPort();
+	m_callBackURL = "http://127.0.0.1:" + to_string(apiPort) + "/notification/reading/asset/";
+
+	Logger::getLogger()->debug("Notification service: callBackURL prefix is " + m_callBackURL);
 }
