@@ -37,7 +37,6 @@ static void worker(NotificationQueue* queue)
  * Constructor for the NotificationQueue class
  *
  * @param    notificationName	NotificationService name
- *©
  */
 NotificationQueue::NotificationQueue(const string& notificationName) :
 				     m_name(notificationName)
@@ -45,7 +44,7 @@ NotificationQueue::NotificationQueue(const string& notificationName) :
 	// Set running
 	m_running = true;
 	// Set instance
-        m_instance = this;
+	m_instance = this;
 	// Start process queue thread
 	m_queue_thread = new thread(worker, this);
 }

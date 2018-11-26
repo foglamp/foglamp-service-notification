@@ -17,6 +17,9 @@
 #include <delivery_plugin.h>
 #include <reading_set.h>
 
+/**
+ * Class that represents the item stored in the queue.
+ */
 class NotificationQueueElement
 {
 	public:
@@ -35,6 +38,9 @@ class NotificationQueueElement
 
 /**
  * The NotificationQueue class.
+ *
+ * This class handles the notification items received,
+ * storing data into a std::queue and the processing them.
  */
 class NotificationQueue
 {
