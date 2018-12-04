@@ -35,6 +35,7 @@ class RulePlugin : public Plugin
 		virtual bool			eval(const std::string& assetValues);
 		virtual std::string		reason() const;
 		virtual bool			isBuiltin() const { return false; };
+		virtual PLUGIN_INFORMATION*	getInfo();
 
 	private:
 		PLUGIN_HANDLE			(*pluginInit)(const ConfigCategory* config);

@@ -126,3 +126,14 @@ string RulePlugin::reason() const
 	}
 	return ret;
 }
+
+/**
+ * Return PluginInfo data
+ *
+ * @return	Pointer to loaded plugin Info data
+ */
+PLUGIN_INFORMATION* RulePlugin::getInfo()
+{
+	// Return 'info' member of base class Plugin
+	return this->info;
+}
