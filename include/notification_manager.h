@@ -36,7 +36,7 @@ class NotificationRule : public NotificationElement
 				 const std::string& notification,
 				 RulePlugin* plugin);
 		~NotificationRule();
-		RulePlugin*		getPlugin() { return m_plugin; };	
+		RulePlugin*		getPlugin() { return m_plugin; };
 
 	private:
 		RulePlugin*		m_plugin;
@@ -111,11 +111,13 @@ class NotificationManager
 		std::map<std::string, NotificationInstance *>&
 					getInstances() { return m_instances; };
 		NotificationInstance*	getNotificationInstance(const std::string& instanceName) const;
-		PLUGIN_HANDLE		loadRulePlugin(const string& rulePluginName);
-		PLUGIN_HANDLE		loadDeliveryPlugin(const string& deliveryPluginName);
 		NOTIFICATION_TYPE	parseType(const string& type);
+		RulePlugin*		createRulePlugin(const string& rulePluginName);
+		DeliveryPlugin*		createDeliveryPlugin(const string& deliveryPluginName);
 
 	private:
+		PLUGIN_HANDLE		loadRulePlugin(const string& rulePluginName);
+		PLUGIN_HANDLE		loadDeliveryPlugin(const string& deliveryPluginName);
 		void			addInstance(const string& instanceName,
 						    bool enable,
 						    NOTIFICATION_TYPE type,
