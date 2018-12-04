@@ -15,37 +15,42 @@
 #include <management_client.h>
 #include <plugin_data.h>
 
-// Rule Plugin class
+/**
+ * Rule Plugin class
+ *
+ * Wrapper class for NotificationRule plugin
+ */
 class RulePlugin : public Plugin
 {
 	public:
 		RulePlugin(const std::string& name,
 			   PLUGIN_HANDLE handle);
-	        ~RulePlugin();
+	        virtual ~RulePlugin();
 
-		const std::string	getName() const { return m_name; };
-		PLUGIN_HANDLE		init(const ConfigCategory& config);
-		void			shutdown();
-		bool			persistData() { return info->options & SP_PERSIST_DATA; };
-		std::string		triggers();
-		bool			eval(const std::string& assetValues);
-		std::string		reason();
+		virtual const std::string	getName() const { return m_name; };
+		virtual PLUGIN_HANDLE		init(const ConfigCategory& config);
+		virtual void			shutdown();
+		virtual bool			persistData() const { return info->options & SP_PERSIST_DATA; };
+		virtual std::string		triggers() const;
+		virtual bool			eval(const std::string& assetValues);
+		virtual std::string		reason() const;
+		virtual bool			isBuiltin() const { return false; };
 
 	private:
-		PLUGIN_HANDLE		(*pluginInit)(const ConfigCategory* config);
-		void			(*pluginShutdownPtr)(PLUGIN_HANDLE);
-		std::string		(*pluginTriggersPtr)(PLUGIN_HANDLE);
-		bool			(*pluginEvalPtr)(PLUGIN_HANDLE,
-							 const std::string& assetValues);
-		std::string		(*pluginReasonPtr)(PLUGIN_HANDLE);
+		PLUGIN_HANDLE			(*pluginInit)(const ConfigCategory* config);
+		void				(*pluginShutdownPtr)(PLUGIN_HANDLE);
+		std::string			(*pluginTriggersPtr)(PLUGIN_HANDLE);
+		bool				(*pluginEvalPtr)(PLUGIN_HANDLE,
+								 const std::string& assetValues);
+		std::string			(*pluginReasonPtr)(PLUGIN_HANDLE);
 
 	public:
 		// Persist plugin data
-		PluginData*     	m_plugin_data;
+		PluginData*     		m_plugin_data;
 
 	private:
-		std::string     	m_name;
-		PLUGIN_HANDLE   	m_instance;
+		std::string     		m_name;
+		PLUGIN_HANDLE   		m_instance;
 };
 
 #endif
