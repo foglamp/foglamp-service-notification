@@ -36,7 +36,7 @@ class NotificationRule : public NotificationElement
 				 const std::string& notification,
 				 RulePlugin* plugin);
 		~NotificationRule();
-		RulePlugin*		getPlugin() { return m_plugin; };	
+		RulePlugin*		getPlugin() { return m_plugin; };
 
 	private:
 		RulePlugin*		m_plugin;
@@ -95,6 +95,7 @@ class NotificationInstance
 };
 
 typedef NotificationInstance::NotificationType NOTIFICATION_TYPE;
+typedef std::function<RulePlugin*(const std::string&)> BUILTIN_RULE_FN;
 
 class NotificationManager
 {
@@ -111,11 +112,15 @@ class NotificationManager
 		std::map<std::string, NotificationInstance *>&
 					getInstances() { return m_instances; };
 		NotificationInstance*	getNotificationInstance(const std::string& instanceName) const;
-		PLUGIN_HANDLE		loadRulePlugin(const string& rulePluginName);
-		PLUGIN_HANDLE		loadDeliveryPlugin(const string& deliveryPluginName);
 		NOTIFICATION_TYPE	parseType(const string& type);
+		RulePlugin*		createRulePlugin(const string& rulePluginName);
+		DeliveryPlugin*		createDeliveryPlugin(const string& deliveryPluginName);
 
 	private:
+		PLUGIN_HANDLE		loadRulePlugin(const string& rulePluginName);
+		PLUGIN_HANDLE		loadDeliveryPlugin(const string& deliveryPluginName);
+		RulePlugin*		findBuiltinRule(const string& rulePluginName);
+		template<typename T> void registerBuiltinRule(const std::string& ruleName);
 		void			addInstance(const string& instanceName,
 						    bool enable,
 						    NOTIFICATION_TYPE type,
@@ -129,5 +134,7 @@ class NotificationManager
 		ManagementClient* 	m_managerClient;
 		std::map<std::string, NotificationInstance *>
 					m_instances;
+		std::map<std::string, BUILTIN_RULE_FN>
+					m_builtinRules;
 };
 #endif

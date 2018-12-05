@@ -165,6 +165,12 @@ NotificationManager::NotificationManager(const string& serviceName,
 {
 	// Set instance
 	NotificationManager::m_instance = this;
+
+	/**
+	 * Add here all the builtin rules we want to make available:
+	 *
+	 * this->registerBuiltinRule<OverMaxRule>("OverMaxRule");
+	 */
 }
 
 /**
@@ -260,21 +266,12 @@ bool NotificationManager::loadInstances()
 						   instance.getName() + "' configuration");
 			return false;
 		}
-
-		// Load plugins
-		PLUGIN_HANDLE ruleHandle;
-		PLUGIN_HANDLE deliveryHandle;
-
-		ruleHandle = this->loadRulePlugin(rulePluginName);
-		deliveryHandle = this->loadDeliveryPlugin(deliveryPluginName);
-
-		if (ruleHandle && deliveryHandle)
+	
+		// Load plugins and get new class instences 
+		RulePlugin* rule = this->createRulePlugin(rulePluginName);
+		DeliveryPlugin* deliver = this->createDeliveryPlugin(deliveryPluginName);
+		if (rule && deliver)
 		{
-			// Create RulePlugin and DeliveryPlugin instances
-			RulePlugin* rule = new RulePlugin(rulePluginName,
-							  ruleHandle);
-			DeliveryPlugin* deliver = new DeliveryPlugin(deliveryPluginName,
-								     deliveryHandle);
 			// Get plugins default configuration
 			string rulePluginConfig = rule->getInfo()->config;
 			string deliveryPluginConfig = deliver->getInfo()->config;
@@ -548,4 +545,100 @@ string NotificationInstance::getTypeString(NOTIFICATION_TYPE type)
 			break;
 	}
 	return ret;
+}
+
+/**
+ * Wraps the loading of a rule plugin and return the RulePlugin class
+ *
+ * @param    rulePluginName		The rule plugin to load.
+ * @return   The RulePlugin class new instance or NULL on errors.
+ */
+RulePlugin* NotificationManager::createRulePlugin(const string& rulePluginName)
+{
+	RulePlugin* rule = NULL;
+	PLUGIN_HANDLE handle = NULL;
+
+	// Check for builtin rule first
+	RulePlugin* isBuiltin = this->findBuiltinRule(rulePluginName);
+	if (isBuiltin)
+	{
+		return isBuiltin;
+	}
+	else
+	{
+		handle = this->loadRulePlugin(rulePluginName);
+		if (handle)
+		{
+			rule = new RulePlugin(rulePluginName, handle);
+		}
+	}
+
+	// Return pointer to RulePlugin class instance
+	return rule;
+}
+
+/**
+ * Wraps the loading of a delivery plugin and return the DeliveryPlugin class
+ *
+ * @param    deliveryPluginName		The delivery plugin to load.
+ * @return   The DeliveryPlugin class new instance or NULL on errors.
+ */
+DeliveryPlugin* NotificationManager::createDeliveryPlugin(const string& deliveryPluginName)
+{
+	DeliveryPlugin* delivery = NULL;
+	PLUGIN_HANDLE handle = NULL;
+
+	// Load the delivery plugin
+	handle = this->loadDeliveryPlugin(deliveryPluginName);
+	if (handle)
+	{
+		// Create DeliveryPlugin class instance
+		delivery = new DeliveryPlugin(deliveryPluginName, handle);
+	}
+	// Return pointer to DeliveryPlugin class instance
+	return delivery;
+}
+
+/**
+ * Find the builtin rule
+ *
+ * @param    ruleName
+ * @return   True if the ruleName is a builtin one, false otherwise
+ */
+RulePlugin* NotificationManager::findBuiltinRule(const string& ruleName)
+{
+	if (!m_builtinRules.size())
+	{
+		// No builtin rules
+		return NULL;
+	}
+
+	auto it = m_builtinRules.find(ruleName);
+	if (it !=  m_builtinRules.end())
+	{
+		// Return the class instance for ruleName
+		return it->second(ruleName);
+	}
+	else
+	{
+		// ruleName not found
+		return NULL;
+	}
+}
+
+/**
+ * Register a builtin rule class, derived form RulePlugin class
+ *
+ * Call this routine with the class name T and its "string" name:
+ * registerBuiltinRule<OverMaxRule>("OverMaxRule");
+ *
+ * @param   ruleName	The built in rule name
+ */
+template<typename T>
+void NotificationManager::registerBuiltinRule(const std::string& ruleName)
+{
+	m_builtinRules[ruleName] = [](const std::string& ruleName)
+				   {
+					return new T(ruleName);
+				   };
 }

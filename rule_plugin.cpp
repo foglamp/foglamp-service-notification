@@ -12,15 +12,22 @@
 
 using namespace std;
 
-
-// RulePlugin constructor
+/**
+ * Constructor for the class that wraps the notification rule plugin
+ *
+ * Enclose a set of function pointers that resolve to the loaded plugin.
+ *
+ * @param    name	The plugin name.
+ * @param    handle	The loaded plugin handle from
+ *			plugin manager.
+ */
 RulePlugin::RulePlugin(const std::string& name,
 		       PLUGIN_HANDLE handle) : Plugin(handle), m_name(name)
 {
 	// Setup the function pointers to the plugin
 	pluginInit = (PLUGIN_HANDLE (*)(const ConfigCategory *))
-					manager->resolveSymbol(handle,
-							       "plugin_init");
+					manager->resolveSymbol(handle, "plugin_init");
+
 	pluginShutdownPtr = (void (*)(PLUGIN_HANDLE))
 				      manager->resolveSymbol(handle,
 							     "plugin_shutdown");
@@ -38,9 +45,12 @@ RulePlugin::RulePlugin(const std::string& name,
 	m_plugin_data = NULL;
 }
 
-//RulePlugin destructor
+/**
+ * RulePlugin destructor
+ */
 RulePlugin::~RulePlugin()
 {
+	// Free plugin data
 	delete m_plugin_data;
 }
 
@@ -73,7 +83,7 @@ void RulePlugin::shutdown()
  * @return		The JSON document, as string
  *			that describes the rule triggers.
  */
-string RulePlugin::triggers()
+string RulePlugin::triggers() const
 {
 	string ret = "";
 	if (this->pluginTriggersPtr)
@@ -107,7 +117,7 @@ bool RulePlugin::eval(const string& assetValues)
  *
  * @return		JSON string with notification reason,
  */
-string RulePlugin::reason()
+string RulePlugin::reason() const
 {
 	string ret = "";
 	if (this->pluginReasonPtr)
@@ -115,4 +125,15 @@ string RulePlugin::reason()
 		ret = this->pluginReasonPtr(m_instance);
 	}
 	return ret;
+}
+
+/**
+ * Return PluginInfo data
+ *
+ * @return	Pointer to loaded plugin Info data
+ */
+PLUGIN_INFORMATION* RulePlugin::getInfo()
+{
+	// Return 'info' member of base class Plugin
+	return this->info;
 }
