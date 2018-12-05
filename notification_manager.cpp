@@ -613,10 +613,11 @@ RulePlugin* NotificationManager::findBuiltinRule(const string& ruleName)
 		return NULL;
 	}
 
-	if (m_builtinRules.find(ruleName) !=  m_builtinRules.end())
+	auto it = m_builtinRules.find(ruleName);
+	if (it !=  m_builtinRules.end())
 	{
 		// Return the class instance for ruleName
-		return m_builtinRules[ruleName](ruleName);
+		return it->second(ruleName);
 	}
 	else
 	{
