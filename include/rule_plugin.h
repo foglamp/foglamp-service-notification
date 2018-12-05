@@ -27,7 +27,7 @@ class RulePlugin : public Plugin
 			   PLUGIN_HANDLE handle);
 	        virtual ~RulePlugin();
 
-		virtual const std::string	getName() const { return m_name; };
+		const std::string		getName() const { return m_name; };
 		virtual PLUGIN_HANDLE		init(const ConfigCategory& config);
 		virtual void			shutdown();
 		virtual bool			persistData() const { return info->options & SP_PERSIST_DATA; };
@@ -49,9 +49,11 @@ class RulePlugin : public Plugin
 		// Persist plugin data
 		PluginData*     		m_plugin_data;
 
+	protected:
+		PLUGIN_HANDLE   		m_instance;
+
 	private:
 		std::string     		m_name;
-		PLUGIN_HANDLE   		m_instance;
 };
 
 #endif
