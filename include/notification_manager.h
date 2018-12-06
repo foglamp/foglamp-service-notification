@@ -15,6 +15,69 @@
 #include <rule_plugin.h>
 #include <delivery_plugin.h>
 
+/**
+ * The EvaluationType class represents
+ * the evalutation type of notification data.
+ *
+ * Supported directives:  Window, Average, Minimum, Maximum
+ * with the specified time period
+ * and Latest (without time indication)
+ * These informations come from "plugin_triggers" call.
+ */
+class EvaluationType
+{
+	public:
+		typedef enum EvalType {
+			Latest,
+			Window,
+			Average,
+			Minimum,
+			Maximum
+		} EVAL_TYPE;
+
+		EvaluationType(EVAL_TYPE type, time_t interval)
+		{
+			m_type = type;
+			m_interval = interval;
+		};
+		~EvaluationType() {};
+
+		EVAL_TYPE		getType() const { return m_type; };
+		time_t			getInterval() const { return m_interval; };
+
+	private:
+		EVAL_TYPE		m_type;
+		time_t		m_interval;
+		
+};
+
+/**
+ * This class represents the notification evaluation
+ * for a given asset name in a Notification rule.
+ */
+class NotificationDetail
+{
+	public:
+		NotificationDetail(const std::string& asset,
+				   const std::string& rule,
+				   EvaluationType& value);
+		~NotificationDetail();
+
+		const std::string&	getAssetName() const{ return m_asset; };
+		const std::string&	getRuleName() const { return m_rule; };
+		const EvaluationType::EVAL_TYPE
+					getType() const { return m_value.getType(); };
+		const time_t		getInterval() const { return m_value.getInterval(); };
+
+	private:
+		const std::string	m_asset;
+		const std::string	m_rule;
+		EvaluationType		m_value;
+};
+
+/**
+ * Parent class for NotificationRule and NotificationDelivery classes
+ */
 class NotificationElement
 {
 	public:
@@ -29,6 +92,18 @@ class NotificationElement
 		const std::string	m_notification;
 };
 
+/**
+ * The NotificationRule class represents
+ * a Notification rule part of a Notification instance.
+ * The constructor accepts a builtin rule or a plugin rule name to load.
+ *
+ * @param    name		The notification rule name set in
+ *				the Notifaction instance configuration.
+ * @param    notification	The Notification instance name.
+ * @param    plugin		The Notification rule, builtin or
+ *				a dynamically loaded plugin.
+ */
+ 
 class NotificationRule : public NotificationElement
 {
 	public:
@@ -37,11 +112,30 @@ class NotificationRule : public NotificationElement
 				 RulePlugin* plugin);
 		~NotificationRule();
 		RulePlugin*		getPlugin() { return m_plugin; };
+		// Get all asset names
+		vector<NotificationDetail>&
+					getAssets() { return m_assets; };
+		// Add an asset name
+		void			addAsset(NotificationDetail& info)
+		{
+			m_assets.push_back(info);
+		};
 
 	private:
 		RulePlugin*		m_plugin;
+		vector<NotificationDetail>
+					m_assets;
 };
 
+/**
+ * The NotificationDelivery class represents
+ * a Notification delivery channel part of a Notification instance.
+ *
+ * @param    name		The notification delivery name set in
+ *				the Notifaction instance configuration.
+ * @param    notification	The Notification instance name.
+ * @param    plugin		The Notification delivery plugin to load.
+ */
 class NotificationDelivery : public NotificationElement
 {
 	public:
@@ -120,7 +214,8 @@ class NotificationManager
 		PLUGIN_HANDLE		loadRulePlugin(const string& rulePluginName);
 		PLUGIN_HANDLE		loadDeliveryPlugin(const string& deliveryPluginName);
 		RulePlugin*		findBuiltinRule(const string& rulePluginName);
-		template<typename T> void registerBuiltinRule(const std::string& ruleName);
+		template<typename T> void
+					registerBuiltinRule(const std::string& ruleName);
 		void			addInstance(const string& instanceName,
 						    bool enable,
 						    NOTIFICATION_TYPE type,

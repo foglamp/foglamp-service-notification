@@ -14,8 +14,6 @@
 #include <management_client.h>
 #include <storage_client.h>
 #include <notification_manager.h>
-#include <vector>
-#include <map>
 
 /**
  * The SubscriptionElement class handles the notification registration to
@@ -48,7 +46,6 @@ class SubscriptionElement
  * storage server.
  * Registrations are done per asset name and one asset name might have different
  * notification rules.
- *
  */
 class NotificationSubscription
 {
@@ -58,24 +55,28 @@ class NotificationSubscription
 		~NotificationSubscription();
 
 		static	NotificationSubscription*
-			getInstance() { return m_instance; };
-		void registerSubscriptions();
+					getInstance() { return m_instance; };
+		void			registerSubscriptions();
 		const std::string&	getNotificationName() { return m_name; };
 		std::map<std::string, std::vector<SubscriptionElement>>&
-			getAllSubscriptions() { return m_subscriptions; };
+					getAllSubscriptions() { return m_subscriptions; };
 		std::vector<SubscriptionElement>&
-			getSubscription(const std::string& assetName)
+					getSubscription(const std::string& assetName)
 		{
 			return m_subscriptions[assetName];
 		};
-		bool addSubscription(const std::string& assetName,
-				     SubscriptionElement& element);
+		bool 			addSubscription(const std::string& assetName,
+							SubscriptionElement& element);
+
+	private:
+		EvaluationType		getEvalType(const Value& value);
 
 	private:
 		const std::string	m_name;
 		static NotificationSubscription*
 					m_instance;
 		StorageClient&		m_storage;
+		// There can be different subscriptions for the same assetName
 		std::map<std::string, std::vector<SubscriptionElement>>
 					m_subscriptions;
 };
