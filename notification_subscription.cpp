@@ -67,7 +67,6 @@ NotificationSubscription::~NotificationSubscription()
 {
 	// Get NotificationAPI instance
 	NotificationApi* api = NotificationApi::getInstance();
-
 	// Get callback URL
 	string callBackURL = api->getCallBackURL();
 
@@ -93,7 +92,7 @@ NotificationSubscription::~NotificationSubscription()
  * Populate the Subscriptions map given the asset name
  * in "plugin_triggers" call of all rule plugins belonging to
  * registered Notification rules in NotificationManager intances.
- * Also register Notification interest to Storage server for each asset name.
+ * Register also interest to Storage server for asset names.
  */
 void NotificationSubscription::registerSubscriptions()
 {
@@ -129,7 +128,6 @@ void NotificationSubscription::registerSubscriptions()
 
 		if (rulePluginInstance)
 		{
-			string ruleName = instance->getRule()->getName();
 			// Call "plugin_triggers"
 			string document = rulePluginInstance->triggers();
 
@@ -152,12 +150,24 @@ void NotificationSubscription::registerSubscriptions()
 				continue;
 			}
 
+			string ruleName = instance->getRule()->getName();
 			for (Value::ConstValueIterator itr = triggers.Begin();
 						       itr != triggers.End();
 						       ++itr)
 			{
+				// Get asset name
 				string asset = (*itr)["asset"].GetString();
+			 	// Get evaluation type and time period
+				EvaluationType type = this->getEvalType((*itr));
+				// Create NotificationDetail object
+				NotificationDetail assetInfo(asset,
+							     ruleName,
+							     type);
 
+				// Add assetInfo to its rule
+				NotificationRule* theRule = instance->getRule();
+				theRule->addAsset(assetInfo);
+ 
 				// Create subscription object
 				SubscriptionElement subscription(asset,
 								 (*it).first,
@@ -165,8 +175,7 @@ void NotificationSubscription::registerSubscriptions()
 								 ((*it).second)->getDelivery());
 
 				// Add subscription and register asset interest
-				bool ret = this->addSubscription(asset,
-								 subscription);
+				bool ret = this->addSubscription(asset, subscription);
 			}
 		}
 	}
@@ -176,7 +185,7 @@ void NotificationSubscription::registerSubscriptions()
  * Add a subscription object to Subscriptions
  * and register the Reading asset notification to storage service.
  *
- * Different subscription objectis can be added to
+ * Different subscription objects can be added to
  * to existing ones per assetName. 
  *
  * @param    assetName		The assetName to register for notifications
@@ -205,10 +214,10 @@ bool NotificationSubscription::addSubscription(const std::string& assetName,
 	 * We can have different Subscriptions for each asset:
 	 * add new one into the vector
 	 */
-	m_assets[assetName].push_back(element);
+	m_subscriptions[assetName].push_back(element);
 
 	// Register once per asset Notification interest to Storage server
-	if (m_assets[assetName].size() == 1)
+	if (m_subscriptions[assetName].size() == 1)
 	{
 		m_storage.registerAssetNotification(assetName,
 						    (callBackURL + assetName));
@@ -218,4 +227,40 @@ bool NotificationSubscription::addSubscription(const std::string& assetName,
 					  element.getNotificationName());
 	}
 	return true;
+}
+
+/**
+ * Check for notification evaluation type in the input JSON object
+ *
+ * @param    value	The input JSON object 
+ * @return		NotificationType object 
+ */
+EvaluationType NotificationSubscription::getEvalType(const Value& value)
+{
+	// Default is latest, so time = 0
+	time_t interval = 0;
+	EvaluationType::EVAL_TYPE evaluation = EvaluationType::Latest;
+
+	if (value.HasMember("window"))
+	{
+		interval = value["window"].GetUint();
+		evaluation = EvaluationType::Window;
+	}
+	else if (value.HasMember("average"))
+	{
+		interval = value["average"].GetUint();
+		evaluation = EvaluationType::Average;
+	}
+	else if (value.HasMember("minimum"))
+	{
+		interval = value["minimum"].GetUint();
+		evaluation = EvaluationType::Minimum;
+	}
+	else if (value.HasMember("maximum"))
+	{
+		interval = value["maximum"].GetUint();
+		evaluation = EvaluationType::Maximum;
+	}
+
+	return EvaluationType(evaluation, interval);
 }

@@ -26,6 +26,29 @@ using namespace std;
 NotificationManager* NotificationManager::m_instance = 0;
 
 /**
+ * NotificationDetail class constructor
+ *
+ * @param    asset	The asset name
+ * @param    rule	The rule name the asset belongs to
+ * @param    type	The notification evaluation type
+ *	
+ */
+NotificationDetail::NotificationDetail(const string& asset,
+				       const string& rule,
+				       EvaluationType& type) :
+				       m_asset(asset),
+				       m_rule(rule),
+				       m_value(type)
+{
+}
+
+/*
+ * NotificationDetail class destructor
+ */
+NotificationDetail::~NotificationDetail()
+{}
+
+/**
  * NotificationElement constructor
  *
  * @param    name		Element name
@@ -210,7 +233,6 @@ bool NotificationManager::loadInstances()
 
 	for (int i = 0; i < instances.length(); i++)
 	{
-		cerr << "Current instance is " << instances[i]->getName() << endl;
 		// Fetch instance configuration
 		ConfigCategory instance = m_managerClient->getCategory(instances[i]->getName());
 
@@ -266,7 +288,7 @@ bool NotificationManager::loadInstances()
 						   instance.getName() + "' configuration");
 			return false;
 		}
-	
+
 		// Load plugins and get new class instences 
 		RulePlugin* rule = this->createRulePlugin(rulePluginName);
 		DeliveryPlugin* deliver = this->createDeliveryPlugin(deliveryPluginName);
@@ -341,6 +363,8 @@ bool NotificationManager::loadInstances()
 		}
 		else
 		{
+			delete deliver;
+			delete rule;
 			this->addInstance(instance.getName(),
 					  enabled,
 					  type,
@@ -634,8 +658,8 @@ RulePlugin* NotificationManager::findBuiltinRule(const string& ruleName)
  *
  * @param   ruleName	The built in rule name
  */
-template<typename T>
-void NotificationManager::registerBuiltinRule(const std::string& ruleName)
+template<typename T> void
+NotificationManager::registerBuiltinRule(const std::string& ruleName)
 {
 	m_builtinRules[ruleName] = [](const std::string& ruleName)
 				   {
