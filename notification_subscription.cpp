@@ -33,12 +33,10 @@ NotificationSubscription* NotificationSubscription::m_instance = 0;
  */
 SubscriptionElement::SubscriptionElement(const std::string& assetName,
 					 const std::string& notificationName,
-					 NotificationRule* rule,
-					 NotificationDelivery* delivery) :
+					 NotificationInstance* notification) :
 					 m_asset(assetName),
 					 m_name(notificationName),
-					 m_rule(rule),
-					 m_delivery(delivery)
+					 m_notification(notification)
 {
 }
 
@@ -171,8 +169,7 @@ void NotificationSubscription::registerSubscriptions()
 				// Create subscription object
 				SubscriptionElement subscription(asset,
 								 (*it).first,
-								 ((*it).second)->getRule(),
-								 ((*it).second)->getDelivery());
+								 instance);
 
 				// Add subscription and register asset interest
 				bool ret = this->addSubscription(asset, subscription);
@@ -226,6 +223,9 @@ bool NotificationSubscription::addSubscription(const std::string& assetName,
 					  assetName + "' for notification " + \
 					  element.getNotificationName());
 	}
+
+	Logger::getLogger()->info("Subscription for asset '" + assetName + \
+				  "' has # " + to_string(m_subscriptions[assetName].size()) + " rules"); 
 	return true;
 }
 
