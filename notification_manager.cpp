@@ -144,6 +144,9 @@ NotificationInstance::NotificationInstance(const string& name,
 					   m_rule(rule),
 					   m_delivery(delivery)
 {
+	// Set initila state fo notification delivery
+	m_lastSent = 0;
+	m_state = NotificationInstance::StateCleared;
 }
 
 /**
@@ -665,4 +668,137 @@ NotificationManager::registerBuiltinRule(const std::string& ruleName)
 				   {
 					return new T(ruleName);
 				   };
+}
+
+/**
+ * Check whether a notification can be sent
+ *
+ * @param    evalRet	Notification data evaluation
+ *			via rule "plugin_eval" call
+ * @return	True if notification has to be sent or false
+ */
+bool NotificationInstance::handleState(bool evalRet)
+{	
+	bool ret = false;
+	time_t now = time(NULL);
+        NotificationInstance::NotificationType type = this->getType();
+
+	switch(type)
+	{
+	case NotificationInstance::Toggled:
+		if (m_state == NotificationState::StateTriggered)
+		{
+			if (evalRet == false)
+			{
+				// Set cleared
+				m_state = NotificationState::StateCleared;
+				m_lastSent = now;
+				// Notify toggled
+				ret = true;
+			}
+			else
+			{
+				if ((now - m_lastSent) > DEFAULT_TOGGLE_FREQUENCY)
+				{
+					m_lastSent = now;
+					// Notify triggered
+					ret = true;
+				}
+				else
+				{
+					// Just log
+				}
+			}
+		}
+		else
+		{
+			if (evalRet == true)
+			{
+				// Set Triggered 
+				m_state = NotificationState::StateTriggered;
+				m_lastSent = now;
+				// Notify toggled
+				ret = true;
+			}
+		}
+
+		break;
+	
+	case NotificationInstance::OneShot:
+		if (m_state == NotificationState::StateTriggered)
+		{
+			if (evalRet == false)
+			{
+				// Set cleared
+				m_state = NotificationState::StateCleared;
+			}
+			else
+			{
+				if ((now - m_lastSent) > DEFAULT_ONESHOT_FREQUENCY)
+				{
+					// Update last sent time
+					m_lastSent = now;
+					// Send notification
+					ret = true;
+				}
+				else
+				{
+					// Just log
+				}
+			}
+		}
+		else
+		{
+			if (evalRet == true)
+			{
+				// Set triggered
+				m_state = NotificationState::StateTriggered;
+				// Update last sent time
+				m_lastSent = now;
+				// Send notification
+				ret = true;
+			}
+		}
+		break;
+
+	case NotificationInstance::Retriggered:
+		if (evalRet == true)
+		{
+			if (m_state == NotificationState::StateTriggered)
+			{
+				if ((now - m_lastSent) > DEFAULT_RETRIGGER_FREQUENCY)
+				{
+					// Update last sent time
+					m_lastSent = now;
+					// Send notification
+					ret = true;
+				}
+				else
+				{
+					// Just log
+				}
+			}
+			else
+			{
+				// Set triggered
+				m_state = NotificationState::StateTriggered;
+				// Update last sent time
+				m_lastSent = now;
+				// Send notification
+				ret = true;
+			}
+		}
+		else
+		{
+			// Set cleared state
+			m_state = NotificationState::StateCleared;
+		}
+
+		break;
+
+	default:
+		break;
+	}
+
+	return ret;
 }
