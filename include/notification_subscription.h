@@ -24,21 +24,20 @@ class SubscriptionElement
 	public:
 		SubscriptionElement(const std::string& assetName,
 				    const std::string& notificationName,
-				    NotificationRule* rule,
-				    NotificationDelivery* delivery);
+				    NotificationInstance* notification);
 
 		~SubscriptionElement();
 
 		const std::string&	getAssetName() const { return m_asset; };
 		const std::string&	getNotificationName() const { return m_name; };
-		NotificationRule*	getRule() { return m_rule; };
-		NotificationDelivery*	getDelivery() { return m_delivery; };
+		NotificationRule*	getRule() { return m_notification->getRule(); };
+		NotificationDelivery*	getDelivery() { return m_notification->getDelivery(); };
+		NotificationInstance*	getInstance() { return m_notification; };
 
 	private:
 		const std::string	m_asset;
 		const std::string	m_name;
-		NotificationRule*	m_rule;
-		NotificationDelivery*	m_delivery;
+		NotificationInstance*	m_notification;
 };
 
 /**
