@@ -144,7 +144,7 @@ NotificationInstance::NotificationInstance(const string& name,
 					   m_rule(rule),
 					   m_delivery(delivery)
 {
-	// Set initila state fo notification delivery
+	// Set initial state fo notification delivery
 	m_lastSent = 0;
 	m_state = NotificationInstance::StateCleared;
 }
@@ -681,7 +681,7 @@ bool NotificationInstance::handleState(bool evalRet)
 {	
 	bool ret = false;
 	time_t now = time(NULL);
-        NotificationInstance::NotificationType type = this->getType();
+	NotificationInstance::NotificationType type = this->getType();
 
 	switch(type)
 	{
