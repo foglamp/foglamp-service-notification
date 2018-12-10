@@ -15,6 +15,11 @@
 #include <rule_plugin.h>
 #include <delivery_plugin.h>
 
+// Notification type repeat frequency
+#define DEFAULT_RETRIGGER_FREQUENCY 60
+#define DEFAULT_ONESHOT_FREQUENCY   60
+#define DEFAULT_TOGGLE_FREQUENCY    60
+
 /**
  * The EvaluationType class represents
  * the evalutation type of notification data.
@@ -156,6 +161,7 @@ class NotificationInstance
 {
 	public:
 		enum NotificationType { None, OneShot, Retriggered, Toggled };
+		enum NotificationState {StateTriggered, StateCleared };
 		NotificationInstance(const std::string& name,
 				     bool enable,
 				     NotificationType type,
@@ -179,6 +185,7 @@ class NotificationInstance
 		bool			isEnabled() const { return m_enable; };
 		NotificationType	getType() const { return m_type; };
 		string			getTypeString(NotificationType type);
+		bool			handleState(bool evalRet);
 
 	private:
 		const std::string	m_name;
@@ -186,6 +193,8 @@ class NotificationInstance
 		NotificationType	m_type;
 		NotificationRule*	m_rule;
 		NotificationDelivery*	m_delivery;
+		time_t			m_lastSent;
+		NotificationState	m_state;
 };
 
 typedef NotificationInstance::NotificationType NOTIFICATION_TYPE;
