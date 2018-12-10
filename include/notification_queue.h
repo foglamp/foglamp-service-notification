@@ -93,15 +93,32 @@ class NotificationQueue
 						      const std::string& assetName);
 		void			clearBufferData(const std::string& ruleName,
 							const std::string& assetName);
-		void 			keepLastBufferData(const std::string& ruleName,
-							   const std::string& assetName,
-							   unsigned long num);
+		void 			keepBufferData(const std::string& ruleName,
+						       const std::string& assetName,
+						       unsigned long num);
 		bool			processAllReadings(NotificationDetail& info,
 							   vector<NotificationDataElement *>& readingsData,
 							   map<std::string, std::string>& results);
 		bool			evalRule(map<std::string, std::string>& results,
 						 NotificationRule* rule);
 		string			processLastBuffer(NotificationDataElement* data);
+		bool			sendNotification(map<string,string>& results,
+							 SubscriptionElement& subscription);
+		map<string, string>	processAllBuffers(vector<NotificationDataElement *>& readingsData,
+							  EvaluationType::EVAL_TYPE type,
+							  unsigned long timeInterval);
+		void			setValue(map<string, Datapoint *>& result,
+						 Datapoint* d,
+						 EvaluationType::EVAL_TYPE type);
+		void			setMinValue(map<string, Datapoint *>& result,
+						    const string& key,
+						    DatapointValue& val);
+		void			setMaxValue(map<string, Datapoint *>& result,
+						    const string& key,
+						    DatapointValue& val);
+		void			setSumValues(map<string, Datapoint *>& result,
+						    const string& key,
+						    DatapointValue& val);
 
 	private:
 		/**

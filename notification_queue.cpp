@@ -316,8 +316,8 @@ void NotificationQueue::clearBufferData(const std::string& ruleName,
  *				to keep in buffers[rule][asset]
  */
 void NotificationQueue::keepBufferData(const std::string& ruleName,
-					   const std::string& assetName,
-					   unsigned long num)
+					const std::string& assetName,
+					unsigned long num)
 {
 	NotificationDataBuffer& dataContainer = this->m_ruleBuffers[ruleName];
 	vector<NotificationDataElement*>& data = dataContainer.getData(assetName);
@@ -369,9 +369,10 @@ bool NotificationQueue::processDataBuffer(map<string, string>& results,
 {
 	bool evalRule = false;
 
-	assert(assetName.compare(info.getAssetName()) == 0);
-	assert(ruleName.compare(info.getRuleName()) == 0);
-
+#ifdef QUEUE_DEBUG_DATA
+	assert(assetName.compare(element.getAssetName()) == 0);
+	assert(ruleName.compare(element.getRuleName()) == 0);
+#endif
 	// Get all data for assetName in the buffer[ruleName]
 	vector<NotificationDataElement*>& readingsData = this->getBufferData(ruleName,
 									     assetName);
@@ -436,10 +437,12 @@ bool NotificationQueue::evalRule(map<string, string>& results,
  * Process all data buffers for a given assetName
  *
  * The assetName might belong to differen rules:
- * iterate through all rules and process
- * the rule_buffers[ruleName][assetName]
  *
- * If a notification is ready call rule plugin_eval
+ * (1) Get all rules for the given asset name
+ * (2) For each rule process data for all assets belonging to the rule
+ *     in rule_buffers[ruleName][assetName]
+ *
+ * (3) If a notification is ready call rule plugin_eval
  * and delivery plugin_deliver if notification has to be sent
  *
  * @param    assetName		Current assetName
@@ -447,50 +450,43 @@ bool NotificationQueue::evalRule(map<string, string>& results,
  */
 void NotificationQueue::processAllDataBuffers(const string& assetName)
 {
-	// Get subscriptions
+	// Get the subscriptions instance
 	NotificationSubscription* subscriptions = NotificationSubscription::getInstance();
 	// Get all subscriptions for assetName
 	std::vector<SubscriptionElement>& registeredItems = subscriptions->getSubscription(assetName);
 
+	// Iterate trough subscriptions
 	for (auto it = registeredItems.begin();
 		  it != registeredItems.end();
 		  ++it)
 	{
 		bool evalRule = false;
 
+		// Map wuth per asset notification results
+		map<string, string> results;
+
 		// Get ruleName
 		string ruleName = (*it).getRule()->getName();
 		// Get all assests belonging to current rule
 		vector<NotificationDetail>& assets = (*it).getRule()->getAssets();
 
-		// Results, for all assetNames belonging to current rule
-		map<string, string> results;
-
+		// Iterate trough assets
 		for (auto itr = assets.begin();
 			  itr != assets.end();
 			  ++itr)
 		{
-			// Process the buffer[rule][asset]
+			// Process data buffer and fill results
 			evalRule = this->processDataBuffer(results,
 							   ruleName,
 							   (*itr).getAssetName(),
 							   *itr);
 		}
 
-		// Check results size first
-		if (results.size() < assets.size())
+		// Eval rule?
+		if (results.size() == assets.size())
 		{
-			// Notification is not ready yet
-			evalRule = false;
-		}
-
-		if (evalRule)
-		{
-			// Call rule "plugin_eval"
-			bool ret = this->evalRule(results, (*it).getRule());
-			// Clear results data
-			results.clear();
-
+			// Notification data ready: check whether it can be sent
+			bool ret = this->sendNotification(results, *it);
 			if (ret)
 			{
 				// Get notification instance
@@ -498,41 +494,34 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 				// Call rule "plugin_reason"
 				string reason = (*it).getRule()->getPlugin()->reason();
 
-				switch (instance->getType())
-				{
-				case NotificationInstance::Retriggered:
-				{
-					DeliveryPlugin* plugin = instance->getDeliveryPlugin();
-					string customText = instance->getDelivery()->getText();
+				DeliveryPlugin* plugin = instance->getDeliveryPlugin();
+				string customText = instance->getDelivery()->getText();
 
-					bool retCode = plugin->deliver(instance->getDelivery()->getName(),
-								       instance->getDelivery()->getNotificationName(),
-								       reason,
-								       (customText.empty() ?
-									"ALERT for " + ruleName :
-									instance->getDelivery()->getText()));
-					break;
-				}
-				case NotificationInstance::OneShot:
-				// Not ready yet
-				case NotificationInstance::Toggled:
-				// Not ready yet
-				default:
-					break;
-				}
+				bool retCode = plugin->deliver(instance->getDelivery()->getName(),
+							       instance->getDelivery()->getNotificationName(),
+							       reason,
+							       (customText.empty() ?
+								"ALERT for " + ruleName :
+								instance->getDelivery()->getText()));
+
 			}
 		}
 	}
 }
 
 /**
- * Process add Readings data in the data buffers
+ * Process all readings in data buffers
+ * and return notification results data.
  *
- * @param    info		The notification details
+ * This routine can process the last reading in the last buffer
+ * or all the readings data, accordingly to rule evaluation type
+ *
+ * @param    info		The notification details for assetName
  * @param    readingsData	Data vector in the buffer
- * @param    results		Results map to update
- * @return			True if the notification is ready,
- *				false otherwise
+ * @param    results		The output result map to fill
+ * @return			True if notifcation is ready to be sent,
+ *				false otherwise.
+ *
  */
 bool NotificationQueue::processAllReadings(NotificationDetail& info,
 					   vector<NotificationDataElement *>& readingsData,
@@ -561,31 +550,85 @@ bool NotificationQueue::processAllReadings(NotificationDetail& info,
 	switch(info.getType())
 	{
 	case EvaluationType::Latest:
-		// * Process only last buffer
+		 // Just process the last buffer
 		{
 		string output = this->processLastBuffer(readingsData.back());
 		if (!output.empty())
 		{
 			// This notification is ready
 			evalRule = true;
+
 			// Update data in the output buffer
-			results[assetName] = string(output);
+			results[assetName] = output;
 		}
 		break;
 		}
 
 	case EvaluationType::Minimum:
-		// Not ready yet
 	case EvaluationType::Maximum:
-		// Not ready yet
 	case EvaluationType::Average:
-		// Not ready yet
 	case EvaluationType::Window:
 	default:
-		// Not ready yet
+		// Process ALL buffers
+		{
+		map<string, string> output = this->processAllBuffers(readingsData,
+								     info.getType(),
+								     info.getInterval());
+		if (output.size())
+		{
+			// This notification is ready
+			evalRule = true;
+
+			// Prepare string result per datapoint
+			string content = "{ ";
+			for (auto c = output.begin();
+				  c != output.end();
+				  ++c)
+			{
+				string dataPointName = (*c).first;
+				content += "\"" + dataPointName + "\" : ";
+
+				if (info.getType() == EvaluationType::Window)
+				{
+					// Add leading "[" and trailing "]"
+					content +=  "[ " + (*c).second +  " ]";
+				}
+				else
+				{
+					content += (*c).second;
+				}
+
+				if (next(c, 1) != output.end())
+				{
+					content += ", ";
+				}
+			}
+			content += " }";
+
+			// Set result
+			results[assetName] = string(content);
+		}
 		break;
+		}
 	}
 
+#ifdef QUEUE_DEBUG_DATA
+	// Check
+	for (auto c = readingsData.begin();
+		  c != readingsData.end();
+		  ++c)
+	{
+		vector<Reading *>*s = (*c)->getData()->getAllReadingsPtr();
+		for (auto r = s->begin();
+			  r != s->end();
+			  ++r)
+		{
+			assert(assetName.compare((*r)->getAssetName()) == 0);
+		}
+	}
+#endif
+
+	// Return evaluation result
 	return evalRule;
 }
 
@@ -619,6 +662,8 @@ string NotificationQueue::processLastBuffer(NotificationDataElement* data)
 
 		// Get the last Reading in the set
 		std::vector<Datapoint *>& dataPoints = readings.back()->getReadingData();
+
+		// Create a JSON string with all datapoints
 		for (auto d = dataPoints.begin();
 			  d != dataPoints.end();
 			  ++d)
@@ -631,11 +676,383 @@ string NotificationQueue::processLastBuffer(NotificationDataElement* data)
 		}
 		ret += " }";
 
-		// Just keep one buffer
 		this->keepBufferData(data->getRuleName(),
-					data->getAssetName(),
-					1);
+				     data->getAssetName(),
+				     1);
 
 		return ret;
+	}
+}
+
+/**
+ * Check whether a notification can be sent
+ * give current notification instance state and
+ * evaluation of notification data
+ *
+ * @param    results		Notification data
+ * @param    subscription	Current subscription
+ * @return			True if the notification can be sent,
+ *				false otherwise.
+ */
+bool NotificationQueue::sendNotification(map<string,string>& results,
+					 SubscriptionElement& subscription)
+{
+	// Get notification instance
+	NotificationInstance* instance = subscription.getInstance();
+
+	// Eval notification data via ruel "plugin_eval"
+	bool eval = this->evalRule(results, subscription.getRule());
+
+	// Return send notification action
+	return instance->handleState(eval);
+}
+
+/**
+ * Process all data buffers
+ *
+ * @param    readingsData	The data buffers
+ * @param    type		The rule evaluation type
+ * @param    timeInterval	The time interval for data evaluation
+ * @return			A map with string values which
+ *				represents the notification data ready.
+ *				If the map is empty notification is not ready yet.
+ *				
+ */
+map<string,string>
+NotificationQueue::processAllBuffers(vector<NotificationDataElement *>& readingsData,
+				     EvaluationType::EVAL_TYPE type,
+				     unsigned long timeInterval)
+{
+	bool evalRule = false;
+
+	map<string, string> window;
+
+	unsigned long last_time = 0;
+	map<string, Datapoint*> result;
+
+	unsigned long readingsDone = 0;
+	unsigned long buffersDone = 0;
+
+	string assetName;
+	string ruleName;
+
+	// Iterate throught buffers data, reverse order
+	for (auto item = readingsData.rbegin();
+		  item != readingsData.rend();
+		  ++item)
+	{
+		buffersDone++;
+		// Processing data, for assetName
+#ifdef QUEUE_DEBUG_DATA
+		if (!assetName.empty())
+		{
+			assert(assetName.compare((*item)->getAssetName()) == 0);
+		}
+#endif
+		assetName = (*item)->getAssetName();
+
+#ifdef QUEUE_DEBUG_DATA
+		if (!ruleName.empty())
+		{
+			assert(ruleName.compare((*item)->getRuleName()) == 0);
+		}
+#endif
+		ruleName = (*item)->getRuleName();
+		
+		// Iterate throught readings, reverse order
+		const std::vector<Reading *>& readings = (*item)->getData()->getAllReadings();
+		for (auto r = readings.rbegin();
+			  r != readings.rend();
+			  ++r)
+		{
+			readingsDone++;
+
+#ifdef QUEUE_DEBUG_DATA
+			assert(assetName.compare((*r)->getAssetName()) == 0);
+#endif
+
+			unsigned long current_time = (*r)->getTimestamp();
+			if (item == readingsData.rbegin() &&
+			    r == readings.rbegin())
+			{
+				// Mark last time as timestamp of last reading data
+				last_time = current_time;
+			}
+
+			// Iterate through datapoints
+			std::vector<Datapoint *>& data = (*r)->getReadingData();
+			for (auto d = data.begin();
+				  d != data.end();
+				  ++d)
+			{
+				string key = (*d)->getName();
+				if (type != EvaluationType::Window)
+				{
+					// Set MIN or MAX or SUM
+					this->setValue(result, *d, type);
+				}
+				else
+				{
+					// Keep window of values for any datapoint type:
+					if (!window[key].empty())
+					{
+						window[key].append(", ");
+					}
+					// Just append the string value
+					window[key].append((*d)->getData().toString());
+				}
+			}
+
+			// Check whether the notification is ready
+			if ((last_time - current_time) > timeInterval)
+			{
+				evalRule = true;
+				// Exit from readings loop
+				break;
+			}
+		}
+
+		if (evalRule)
+		{
+			// Exit from buffers loop
+			break;
+		}
+	}
+
+	// Create result map 
+	map<string, string> ret;
+
+	// Return notification data
+	if (buffersDone && evalRule)
+	{
+		// Just keep buffersDone buffers
+		this->keepBufferData(ruleName, assetName, buffersDone);
+
+		// Prepare output result set
+	        switch(type)
+		{
+		case EvaluationType::Minimum:
+		case EvaluationType::Maximum:
+			for (auto m = result.begin();
+				  m != result.end();
+				  ++m)
+			{
+				// Prepare output string
+				ret[(*m).first] = result[(*m).first]->getData().toString();
+
+				// Remove data
+				delete result[(*m).first];
+			}
+			return ret;
+			break;
+
+        	case EvaluationType::Average:
+			for (auto m = result.begin();
+				  m != result.end();
+				  ++m)
+			{
+				long lVal;
+				double dVal;
+				// Check for INT or FLOAT
+				switch(result[(*m).first]->getData().getType())
+				{
+				case DatapointValue::T_INTEGER:
+					lVal = result[(*m).first]->getData().toInt();
+					// Prepare output string
+					ret[(*m).first] = to_string(lVal / (double)readingsDone);
+					break;
+
+				case DatapointValue::T_FLOAT:
+					dVal = result[(*m).first]->getData().toDouble();
+					// Prepare output string
+					ret[(*m).first] = to_string(dVal / (double)readingsDone);
+					break;
+
+				case DatapointValue::T_FLOAT_ARRAY:
+				case DatapointValue::T_STRING:
+				default:
+					// Do nothing right now
+					break;
+				}
+
+				// Remove data
+				delete result[(*m).first];
+			}
+			// Return empty data
+			return ret;
+			break;
+
+		case EvaluationType::Window:
+			// Return window data
+			return window;
+			break;
+
+		default:
+			// Return empty data
+			return ret;
+			break;
+		}
+	}
+	else
+	{
+		// Rule cannot be evaluated right now: delete result values
+		for (auto m = result.begin();
+			  m != result.end();
+		  ++m)
+		{
+			// Remove data
+			delete result[(*m).first];
+		}
+	}
+
+	// Return empty data
+	return ret;
+}
+
+/**
+ * Update or set datapoint value result map
+ *
+ * @param    result		Output map with current result values
+ * @param    d			Input datapoint value
+ * @param    type		Rule evaluation type
+ */
+void NotificationQueue::setValue(map<string, Datapoint *>& result,
+				 Datapoint* d,
+				 EvaluationType::EVAL_TYPE type)
+{
+	string key = d->getName();
+	// Create a new datapoint value object
+	DatapointValue* val = new DatapointValue(d->getData());
+
+	if (result.find(key) == result.end())
+	{
+		// Create a new datapoint object
+		result[key] = new Datapoint(key, *val);
+	}
+	else
+	{
+		// Update/Set datapoint value
+		switch(type)
+		{
+			case EvaluationType::Minimum:
+				setMinValue(result, key, *val);
+				break;
+			case EvaluationType::Maximum:
+				setMaxValue(result, key, *val);
+				break;
+			case EvaluationType::Average:
+				setSumValues(result, key, *val);
+				break;
+			default:
+				break;
+		}
+	}
+}
+
+/**
+ * Set Min value in output result map
+ *
+ * @param    result		Output map with current result values
+ * @param    key		Datapoint name
+ * @param    val		Input datapoint value.
+ */
+void NotificationQueue::setMinValue(map<string, Datapoint *>& result,
+				    const string& key,
+				    DatapointValue& val)
+{
+
+	// Set MIN
+	switch (val.getType())
+	{
+	case DatapointValue::T_INTEGER:
+		if (val.toInt() < result[key]->getData().toInt())
+		{
+			result[key]->getData().setValue(val.toInt());
+		}
+		break;
+
+	case DatapointValue::T_FLOAT:
+		if (val.toDouble() < result[key]->getData().toDouble())
+		{
+			result[key]->getData().setValue(val.toDouble());
+		}
+		break;
+
+	case DatapointValue::T_FLOAT_ARRAY:
+	case DatapointValue::T_STRING:
+	default:
+		// Do nothing, use the current DatapointValue value
+		result[key]->getData() = val;
+		break;
+	}
+}
+
+/**
+ * Set Max value in output result map
+ *
+ * @param    result		Output map with current result values
+ * @param    key		Datapoint name
+ * @param    val		Input datapoint value.
+ */
+void NotificationQueue::setMaxValue(map<string, Datapoint *>& result,
+				    const string& key,
+				    DatapointValue& val)
+{
+
+	// Set MAX
+	switch (val.getType())
+	{
+	case DatapointValue::T_INTEGER:
+		if (val.toInt() > result[key]->getData().toInt())
+		{
+			result[key]->getData().setValue(val.toInt());
+		}
+		break;
+
+	case DatapointValue::T_FLOAT:
+		if (val.toDouble() > result[key]->getData().toDouble())
+		{
+			result[key]->getData().setValue(val.toDouble());
+		}
+		break;
+
+	case DatapointValue::T_FLOAT_ARRAY:
+	case DatapointValue::T_STRING:
+	default:
+		// Do nothing, just overwirite the DatapointValue value
+		result[key]->getData() = val;
+		break;
+	}
+}
+
+/**
+ * Update sum value in output result map
+ *
+ * @param    result		Output map with current result values
+ * @param    key		Datapoint name
+ * @param    val		Input datapoint value.
+ */
+void NotificationQueue::setSumValues(map<string, Datapoint *>& result,
+				    const string& key,
+				    DatapointValue& val)
+{
+
+	// Set MAX
+	switch (val.getType())
+	{
+	case DatapointValue::T_INTEGER:
+		result[key]->getData().setValue(val.toInt() + result[key]->getData().toInt());
+		break;
+
+	case DatapointValue::T_FLOAT:
+		result[key]->getData().setValue(val.toDouble() + result[key]->getData().toDouble());
+		break;
+
+	case DatapointValue::T_FLOAT_ARRAY:
+	case DatapointValue::T_STRING:
+	default:
+		// Do nothing, just overwirite the DatapointValue value
+		result[key]->getData() = val;
+		break;
 	}
 }
