@@ -288,7 +288,7 @@ bool NotificationManager::loadInstances()
 		}
 		if (enabled && deliveryPluginName.empty())
 		{
-			m_logger->fatal("Unable to fetch Notificvation Delivery "
+			m_logger->fatal("Unable to fetch Notification Delivery "
 					"plugin name from Notification instance '" + \
 					instance.getName() + "' configuration");
 			return false;

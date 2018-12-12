@@ -267,7 +267,7 @@ bool NotificationApi::queueNotification(const string& assetName,
 	catch (exception* ex)
 	{
 		m_logger->error("Exception '" + string(ex->what()) + \
-				"' while parsing readigns for asset '" + \
+				"' while parsing readings for asset '" + \
 				assetName + "'" );
 		delete ex;
 		return false;
