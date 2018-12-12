@@ -63,6 +63,15 @@ NotificationSubscription::NotificationSubscription(const string& notificationNam
  */
 NotificationSubscription::~NotificationSubscription()
 {
+	this->getAllSubscriptions().clear();
+}
+
+/**
+ * Unregister subscriptions to storage server:
+ * NOTE: subscriptions object are not deleted right now.
+ */
+void NotificationSubscription::unregisterSubscriptions()
+{
 	// Get NotificationAPI instance
 	NotificationApi* api = NotificationApi::getInstance();
 	// Get callback URL

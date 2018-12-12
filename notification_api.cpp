@@ -13,6 +13,7 @@
 #include "management_api.h"
 #include "logger.h"
 #include "notification_manager.h"
+#include "notification_subscription.h"
 #include "notification_queue.h"
 
 
@@ -73,9 +74,6 @@ NotificationApi::NotificationApi(const unsigned short port,
  */
 NotificationApi::~NotificationApi()
 {
-	this->stopServer();
-	m_thread->join();
-
 	delete m_server;
 	delete m_thread;
 }
@@ -138,6 +136,7 @@ void NotificationApi::stop()
 {
 	this->stopServer();
 }
+
 /**
  * Wait for the HTTP server to shutdown
  */
@@ -294,6 +293,7 @@ bool NotificationApi::queueNotification(const string& assetName,
 
 /**
  * Return JSON string of all loaded instances
+ *
  * @param response	The response stream to send the response on
  * @param request	The HTTP request
  */

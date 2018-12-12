@@ -75,7 +75,7 @@ class NotificationQueue
 		bool			addElement(NotificationQueueElement* element);
 		void			process();
 		bool			isRunning() const { return m_running; };
-		void			stop() { m_running = false; };
+		void			stop();
 
 	private:
 		void			processDataSet(NotificationQueueElement* data);
