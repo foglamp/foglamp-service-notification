@@ -128,6 +128,52 @@ NotificationQueue::~NotificationQueue()
 }
 
 /**
+ * Process data still in the buffers
+ */
+void NotificationQueue::stop()
+{
+
+	m_running = false;
+
+	m_processCv.notify_all();
+
+	// Waiting for the process thread to complete
+	m_queue_thread->join();
+
+	// NotifictionQueue is empty now: clear all remaining data
+
+	// Get the subscriptions instance
+	NotificationSubscription* subscriptions = NotificationSubscription::getInstance();
+        // Get all subscriptions for assetName
+	std::map<std::string, std::vector<SubscriptionElement>>& registeredItems = subscriptions->getAllSubscriptions();
+
+	// Iterate trough subscriptions
+	for (auto it = registeredItems.begin();
+		  it != registeredItems.end();
+		  ++it)
+	{
+		for (auto s = (*it).second.begin();
+			  s != (*it).second.end();
+			  ++s)
+		{
+			// Get ruleName
+			string ruleName = (*s).getRule()->getName();
+			// Get all assests belonging to current rule
+			vector<NotificationDetail>& assets = (*s).getRule()->getAssets();
+
+			//Iterate trough assets
+			for (auto itr = assets.begin();
+				  itr != assets.end();
+				   ++itr)
+			{
+				// Remove all buffers
+				this->clearBufferData(ruleName, (*itr).getAssetName());
+			}
+		}
+	}
+}
+
+/**
  * Add an element to the queue
  *
  * @param    element		The elemnennt to add the queue.
@@ -135,6 +181,13 @@ NotificationQueue::~NotificationQueue()
  */
 bool NotificationQueue::addElement(NotificationQueueElement* element)
 {
+	if (!m_running)
+	{
+		// Don't add new elements if queue is being stopped
+		delete element;
+		return true;
+	}
+
 	lock_guard<mutex> loadLock(m_qMutex);
 
 	m_queue.push(element);
@@ -154,22 +207,36 @@ bool NotificationQueue::addElement(NotificationQueueElement* element)
  */
 void NotificationQueue::process()
 {
-	while (m_running)
+	bool doProcess = true;
+
+	while (doProcess)
 	{
 		NotificationQueueElement* data = NULL;
-
 		// Get data from the queue
 		{
 			unique_lock<mutex> sendLock(m_qMutex);
-			while(m_queue.empty())
+			while (m_queue.empty())
 			{
-				// No data, wait util notified
-				m_processCv.wait(sendLock);
+				if (!m_running)
+				{
+					// No data and load thread is not running.
+					doProcess = false;
+					break;
+				}
+				else
+				{
+					// No data, wait util notified
+					m_processCv.wait(sendLock);
+				}
 			}
-			// Get first element in the queue
-			data = m_queue.front();
-			// Remove the item
-			m_queue.pop();
+
+			if (doProcess)
+			{
+				// Get first element in the queue
+				data = m_queue.front();
+				// Remove the item
+				m_queue.pop();
+			}
 		}
 
 		if (data)
@@ -341,8 +408,9 @@ void NotificationQueue::keepBufferData(const std::string& ruleName,
 		//Remove current vector object
 		data.erase(it);
 	}
+	
 #ifdef QUEUE_DEBUG_DATA
-	 Logger::getLogger()->debug(Keeping Buffers for " + \
+	 Logger::getLogger()->debug("Keeping Buffers for " + \
 				    assetName + " of " + ruleName + \
 				    " removed " + to_string(removed) + "/" + \
 				    to_string(initialSize) + " now has size " + \
@@ -367,12 +435,11 @@ bool NotificationQueue::processDataBuffer(map<string, string>& results,
 					  const string& assetName,
 					  NotificationDetail& info)
 {
-	bool evalRule = false;
-
 #ifdef QUEUE_DEBUG_DATA
 	assert(assetName.compare(element.getAssetName()) == 0);
 	assert(ruleName.compare(element.getRuleName()) == 0);
 #endif
+
 	// Get all data for assetName in the buffer[ruleName]
 	vector<NotificationDataElement*>& readingsData = this->getBufferData(ruleName,
 									     assetName);
@@ -442,8 +509,8 @@ bool NotificationQueue::evalRule(map<string, string>& results,
  * (2) For each rule process data for all assets belonging to the rule
  *     in rule_buffers[ruleName][assetName]
  *
- * (3) If a notification is ready call rule plugin_eval
- * and delivery plugin_deliver if notification has to be sent
+ * (3) If a notification is ready, call rule plugin_eval
+ *     and delivery plugin_deliver (if notification has to be sent)
  *
  * @param    assetName		Current assetName
  *				that is receiving notifications data
@@ -462,7 +529,7 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 	{
 		bool evalRule = false;
 
-		// Map wuth per asset notification results
+		// Per asset notification map
 		map<string, string> results;
 
 		// Get ruleName
@@ -503,7 +570,6 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 							       (customText.empty() ?
 								"ALERT for " + ruleName :
 								instance->getDelivery()->getText()));
-
 			}
 		}
 	}
@@ -517,7 +583,7 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
  * or all the readings data, accordingly to rule evaluation type
  *
  * @param    info		The notification details for assetName
- * @param    readingsData	Data vector in the buffer
+ * @param    readingsData	All data buffers
  * @param    results		The output result map to fill
  * @return			True if notifcation is ready to be sent,
  *				false otherwise.

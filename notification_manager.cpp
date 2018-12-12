@@ -144,7 +144,7 @@ NotificationInstance::NotificationInstance(const string& name,
 					   m_rule(rule),
 					   m_delivery(delivery)
 {
-	// Set initial state fo notification delivery
+	// Set initial state for notification delivery
 	m_lastSent = 0;
 	m_state = NotificationInstance::StateCleared;
 }

@@ -56,6 +56,7 @@ class NotificationSubscription
 		static	NotificationSubscription*
 					getInstance() { return m_instance; };
 		void			registerSubscriptions();
+		void			unregisterSubscriptions();
 		const std::string&	getNotificationName() { return m_name; };
 		std::map<std::string, std::vector<SubscriptionElement>>&
 					getAllSubscriptions() { return m_subscriptions; };

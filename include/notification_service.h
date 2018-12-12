@@ -13,6 +13,10 @@
 #include <logger.h>
 #include <service_handler.h>
 #include <notification_api.h>
+#include <management_client.h>
+#include <management_api.h>
+#include <notification_subscription.h>
+#include <notification_queue.h>
 
 #define SERVICE_NAME		"FogLAMP Notification"
 #define SERVICE_TYPE		"Notification"
@@ -26,16 +30,23 @@ class NotificationService : public ServiceHandler
 	public:
 		NotificationService(const std::string& name);
 		~NotificationService();
-		void 			start(std::string& coreAddress,
+		bool 			start(std::string& coreAddress,
 					      unsigned short corePort);
 		void 			stop();
 		void			shutdown();
+		void			cleanupResources();
 		void			configChange(const std::string&,
 						     const std::string&);
+
 	private:
-		const std::string&	m_name;
+		const std::string	m_name;
 		Logger*			m_logger;
 		bool			m_shutdown;
 		NotificationApi*	m_api;
+		ManagementClient* 	m_managerClient;
+		NotificationSubscription*
+					m_subscription;
+		NotificationQueue*	m_queue;
+		ManagementApi*		m_managementApi;
 };
 #endif
