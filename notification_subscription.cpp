@@ -56,6 +56,9 @@ NotificationSubscription::NotificationSubscription(const string& notificationNam
 {
 	// Set instance
 	m_instance = this;
+
+	// get logger
+	m_logger = Logger::getLogger();
 }
 
 /*
@@ -89,9 +92,9 @@ void NotificationSubscription::unregisterSubscriptions()
 		m_storage.unregisterAssetNotification((*it).first,
 						      callBackURL + (*it).first);
 
-		Logger::getLogger()->info("Unregistering asset '" + \
-					  (*it).first + "' for notification " + \
-					  this->getNotificationName());
+		m_logger->info("Unregistering asset '" + \
+			       (*it).first + "' for notification " + \
+			       this->getNotificationName());
 	}
 }
 
@@ -116,15 +119,15 @@ void NotificationSubscription::registerSubscriptions()
 		NotificationInstance* instance = (*it).second;
 		if (!instance)
 		{
-			Logger::getLogger()->error("Notification instance %s is NULL",
-						   (*it).first.c_str());
+			m_logger->error("Notification instance %s is NULL",
+					(*it).first.c_str());
 			continue;
 		}
 
 		if (!instance->isEnabled())
 		{
-			Logger::getLogger()->info("Notification instance %s is not enabled.",
-						  (*it).first.c_str());
+			m_logger->info("Notification instance %s is not enabled.",
+				       (*it).first.c_str());
 			continue;
 		}
 
@@ -144,16 +147,16 @@ void NotificationSubscription::registerSubscriptions()
 			    !JSONData.HasMember("triggers") ||
 			    !JSONData["triggers"].IsArray())
 			{
-				Logger::getLogger()->error("Failed to parse %s plugin_triggers JSON data",
-							   rulePluginInstance->getName().c_str());
+				m_logger->error("Failed to parse %s plugin_triggers JSON data",
+						rulePluginInstance->getName().c_str());
 				continue;
 			}
 
 			const Value& triggers = JSONData["triggers"];
 			if (!triggers.Size())
 			{
-				Logger::getLogger()->info("No triggers set for %s plugin",
-							  rulePluginInstance->getName().c_str());
+				m_logger->info("No triggers set for %s plugin",
+					       rulePluginInstance->getName().c_str());
 				continue;
 			}
 
@@ -209,10 +212,10 @@ bool NotificationSubscription::addSubscription(const std::string& assetName,
 
 	if (callBackURL.empty())
 	{
-		Logger::getLogger()->fatal("Error while registering asset '" + \
-					   assetName + "' for notification " + \
-					   element.getNotificationName() + \
-					   " callback URL is not set");
+		m_logger->fatal("Error while registering asset '" + \
+				assetName + "' for notification " + \
+				element.getNotificationName() + \
+				" callback URL is not set");
 		return false;
 	}
 
@@ -228,13 +231,13 @@ bool NotificationSubscription::addSubscription(const std::string& assetName,
 		m_storage.registerAssetNotification(assetName,
 						    (callBackURL + assetName));
 
-		Logger::getLogger()->info("Registering asset '" + \
-					  assetName + "' for notification " + \
-					  element.getNotificationName());
+		m_logger->info("Registering asset '" + \
+			       assetName + "' for notification " + \
+			       element.getNotificationName());
 	}
 
-	Logger::getLogger()->info("Subscription for asset '" + assetName + \
-				  "' has # " + to_string(m_subscriptions[assetName].size()) + " rules"); 
+	m_logger->info("Subscription for asset '" + assetName + \
+		       "' has # " + to_string(m_subscriptions[assetName].size()) + " rules"); 
 	return true;
 }
 

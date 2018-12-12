@@ -240,5 +240,6 @@ class NotificationManager
 					m_instances;
 		std::map<std::string, BUILTIN_RULE_FN>
 					m_builtinRules;
+		Logger*			m_logger;
 };
 #endif

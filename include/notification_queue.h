@@ -162,5 +162,6 @@ class NotificationQueue
 		// Per rule priocess buffers
 		map<std::string, NotificationDataBuffer>
 					m_ruleBuffers;
+		Logger*                 m_logger;
 };
 #endif

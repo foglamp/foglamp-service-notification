@@ -13,7 +13,6 @@
 #include <service_record.h>
 #include <plugin_api.h>
 #include <plugin.h>
-#include <logger.h>
 #include <iostream>
 #include <string>
 #include <notification_manager.h>
@@ -192,6 +191,9 @@ NotificationManager::NotificationManager(const string& serviceName,
 	// Set instance
 	NotificationManager::m_instance = this;
 
+	// Get logger
+	m_logger = Logger::getLogger();
+
 	/**
 	 * Add here all the builtin rules we want to make available:
 	 *
@@ -255,18 +257,18 @@ bool NotificationManager::loadInstances()
 		}
 		else
 		{
-			Logger::getLogger()->fatal("Unable to fetch Notification type "
-						   "in Notification instance '" + \
-						   instance.getName() + "' configuration.");
+			m_logger->fatal("Unable to fetch Notification type "
+					"in Notification instance '" + \
+					instance.getName() + "' configuration.");
 			return false;
 		}
 		NOTIFICATION_TYPE type = this->parseType(notification_type);
 		if (type == NOTIFICATION_TYPE::None)
 		{
-			Logger::getLogger()->fatal("Found unsupported Notification type '" + \
-						   notification_type + \
-						   "' in Notification instance '" + \
-						   instance.getName() + "' configuration.");
+			m_logger->fatal("Found unsupported Notification type '" + \
+					notification_type + \
+					"' in Notification instance '" + \
+					instance.getName() + "' configuration.");
 			return false;
 		}
 
@@ -279,16 +281,16 @@ bool NotificationManager::loadInstances()
 
 		if (enabled && rulePluginName.empty())
 		{
-			Logger::getLogger()->fatal("Unable to fetch Notification Rule "
-						   "plugin name from Notification instance '" + \
-						   instance.getName() + "' configuration.");
+			m_logger->fatal("Unable to fetch Notification Rule "
+					"plugin name from Notification instance '" + \
+					instance.getName() + "' configuration.");
 			return false;
 		}
 		if (enabled && deliveryPluginName.empty())
 		{
-			Logger::getLogger()->fatal("Unable to fetch Notificvation Delivery "
-						   "plugin name from Notification instance '" + \
-						   instance.getName() + "' configuration");
+			m_logger->fatal("Unable to fetch Notification Delivery "
+					"plugin name from Notification instance '" + \
+					instance.getName() + "' configuration");
 			return false;
 		}
 
@@ -315,7 +317,7 @@ bool NotificationManager::loadInstances()
 			{
 				string errMsg("Cannot create/update '" + \
 					      ruleCategoryName + "' rule plugin category");
-				Logger::getLogger()->fatal(errMsg.c_str());
+				m_logger->fatal(errMsg.c_str());
 				delete rule;
 				delete deliver;
 				throw runtime_error(errMsg);
@@ -324,7 +326,7 @@ bool NotificationManager::loadInstances()
 			{
 				string errMsg("Cannot create/update '" + \
 					      deliveryCategoryName + "' delivery plugin category");
-				Logger::getLogger()->fatal(errMsg.c_str());
+				m_logger->fatal(errMsg.c_str());
 				delete rule;
 				delete deliver;
 				throw runtime_error(errMsg);
@@ -462,14 +464,14 @@ PLUGIN_HANDLE NotificationManager::loadRulePlugin(const string& rulePluginName)
 {
 	if (rulePluginName.empty())
 	{
-		Logger::getLogger()->error("Unable to fetch rule plugin '%s' from configuration.",
-					   rulePluginName.c_str());
+		m_logger->error("Unable to fetch rule plugin '%s' from configuration.",
+				rulePluginName.c_str());
 		// Failure
 		return NULL;
 	}
 
-	Logger::getLogger()->info("Loading rule plugin '%s'.",
-				  rulePluginName.c_str());
+	m_logger->info("Loading rule plugin '%s'.",
+		       rulePluginName.c_str());
 
 	PluginManager* manager = PluginManager::getInstance();
 	PLUGIN_HANDLE handle;
@@ -477,8 +479,8 @@ PLUGIN_HANDLE NotificationManager::loadRulePlugin(const string& rulePluginName)
 					  PLUGIN_TYPE_NOTIFICATION_RULE)) != NULL)
 	{
 		// Suceess
-		Logger::getLogger()->info("Loaded rule plugin '%s'.",
-					  rulePluginName.c_str());
+		m_logger->info("Loaded rule plugin '%s'.",
+			       rulePluginName.c_str());
 	}
 	return handle;
 }
@@ -494,15 +496,15 @@ PLUGIN_HANDLE NotificationManager::loadDeliveryPlugin(const string& loadDelivery
 {
 	if (loadDeliveryPlugin.empty())
 	{
-		Logger::getLogger()->error("Unable to fetch delivery plugin "
-					   "'%s' from configuration.",
-					   loadDeliveryPlugin.c_str());
+		m_logger->error("Unable to fetch delivery plugin "
+				"'%s' from configuration.",
+				loadDeliveryPlugin.c_str());
 		// Failure
 		return NULL;
 	}
 
-	Logger::getLogger()->info("Loading delivery plugin '%s'.",
-				  loadDeliveryPlugin.c_str());
+	m_logger->info("Loading delivery plugin '%s'.",
+		       loadDeliveryPlugin.c_str());
 
 	PluginManager* manager = PluginManager::getInstance();
 	PLUGIN_HANDLE handle;
@@ -510,8 +512,8 @@ PLUGIN_HANDLE NotificationManager::loadDeliveryPlugin(const string& loadDelivery
 					  PLUGIN_TYPE_NOTIFICATION_DELIVERY)) != NULL)
         {
 		// Suceess
-		Logger::getLogger()->info("Loaded delivery plugin '%s'.",
-					  loadDeliveryPlugin.c_str());
+		m_logger->info("Loaded delivery plugin '%s'.",
+			       loadDeliveryPlugin.c_str());
 	}
 	return handle;
 }
