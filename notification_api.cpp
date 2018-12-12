@@ -11,7 +11,6 @@
 #include "server_http.hpp"
 #include "notification_api.h"
 #include "management_api.h"
-#include "logger.h"
 #include "notification_manager.h"
 #include "notification_subscription.h"
 #include "notification_queue.h"
@@ -65,7 +64,7 @@ NotificationApi::NotificationApi(const unsigned short port,
 	m_server->config.thread_pool_size = threads;
 	m_thread = NULL;
 	m_callBackURL = "";
-
+	m_logger = Logger::getLogger();
 	NotificationApi::m_instance = this;
 }
 
@@ -169,8 +168,7 @@ void NotificationApi::internalError(shared_ptr<HttpServer::Response> response,
 	payload = payload + string(ex.what());
 	payload = payload + "\"";
 
-	Logger *logger = Logger::getLogger();
-	logger->error("NotificationApi Internal Error: %s\n", ex.what());
+	m_logger->error("NotificationApi Internal Error: %s\n", ex.what());
 
 	this->respond(response,
 		      SimpleWeb::StatusCode::server_error_internal_server_error,
@@ -268,9 +266,9 @@ bool NotificationApi::queueNotification(const string& assetName,
 	}
 	catch (exception* ex)
 	{
-		Logger::getLogger()->error("Exception '" + string(ex->what()) + \
-					   "' while parsing readigns for asset '" + \
-					   assetName + "'" );
+		m_logger->error("Exception '" + string(ex->what()) + \
+				"' while parsing readigns for asset '" + \
+				assetName + "'" );
 		delete ex;
 		return false;
 	}
@@ -278,9 +276,9 @@ bool NotificationApi::queueNotification(const string& assetName,
 	{
 		std::exception_ptr p = std::current_exception();
 		string name = (p ? p.__cxa_exception_type()->name() : "null");
-		Logger::getLogger()->error("Exception '" + name + \
-					   "' while parsing readigns for asset '" + \
-					   assetName  + "'" );
+		m_logger->error("Exception '" + name + \
+				"' while parsing readigns for asset '" + \
+				assetName  + "'" );
 		return false;
 	}
 
@@ -327,5 +325,5 @@ void NotificationApi::setCallBackURL()
 	unsigned short apiPort =  this->getListenerPort();
 	m_callBackURL = "http://127.0.0.1:" + to_string(apiPort) + "/notification/reading/asset/";
 
-	Logger::getLogger()->debug("Notification service: callBackURL prefix is " + m_callBackURL);
+	m_logger->debug("Notification service: callBackURL prefix is " + m_callBackURL);
 }

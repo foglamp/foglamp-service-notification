@@ -80,9 +80,9 @@ NotificationQueueElement::NotificationQueueElement(const string& assetName,
 						   m_readings(data)
 {
 #ifdef QUEUE_DEBUG_DATA
-	Logger::getLogger()->debug("addind to queue a NotificationQueueElement [" + \
-				   assetName + "] of # readings = " + \
-				   (data ? to_string(data->getCount()) : string("NO_DATA")));
+	m_logger->debug("addind to queue a NotificationQueueElement [" + \
+			assetName + "] of # readings = " + \
+			(data ? to_string(data->getCount()) : string("NO_DATA")));
 	// Debug check
 	const vector<Reading *>& readings = data->getAllReadings();
         for (auto m = readings.begin();
@@ -117,6 +117,9 @@ NotificationQueue::NotificationQueue(const string& notificationName) :
 	m_instance = this;
 	// Start process queue thread
 	m_queue_thread = new thread(worker, this);
+
+	// Get logger
+	m_logger = Logger::getLogger();
 }
 
 /**
@@ -193,8 +196,8 @@ bool NotificationQueue::addElement(NotificationQueueElement* element)
 	m_queue.push(element);
 
 #ifdef QUEUE_DEBUG_DATA
-	Logger::getLogger()->debug("Element added to queue, asset [" + element->getAssetName() + \
-				  "], #readings " + to_string(element->getAssetData()->getCount()));
+	m_logger->debug("Element added to queue, asset [" + element->getAssetName() + \
+			"], #readings " + to_string(element->getAssetData()->getCount()));
 #endif
 
 	m_processCv.notify_all();
@@ -247,15 +250,15 @@ void NotificationQueue::process()
 		}
 
 #ifdef QUEUE_DEBUG_DATA
-		Logger::getLogger()->debug("Queue processing done: "
-					   "queue has %ld elements",
-					   m_queue.size());
+		m_logger->debug("Queue processing done: "
+				"queue has %ld elements",
+				m_queue.size());
 #endif
 	}
 
 #ifdef QUEUE_DEBUG_DATA
-	Logger::getLogger()->debug("Queue stopped: size %ld elments",
-				   m_queue.size());
+		m_logger->debug("Queue stopped: size %ld elments",
+				m_queue.size());
 #endif
 }
 
@@ -410,12 +413,11 @@ void NotificationQueue::keepBufferData(const std::string& ruleName,
 	}
 	
 #ifdef QUEUE_DEBUG_DATA
-	 Logger::getLogger()->debug("Keeping Buffers for " + \
-				    assetName + " of " + ruleName + \
-				    " removed " + to_string(removed) + "/" + \
-				    to_string(initialSize) + " now has size " + \
-				    to_string(data.size()));
-
+	m_logger->debug("Keeping Buffers for " + \
+			assetName + " of " + ruleName + \
+			" removed " + to_string(removed) + "/" + \
+			to_string(initialSize) + " now has size " + \
+			to_string(data.size()));
 	assert(num == data.size());
 #endif
 }

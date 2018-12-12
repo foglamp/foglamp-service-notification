@@ -10,6 +10,7 @@
  * Author: Massimiliano Pinto
  */
 
+#include "logger.h"
 #include <server_http.hpp>
 
 using namespace std;
@@ -63,6 +64,7 @@ class NotificationApi
 		unsigned int			m_threads;
 		thread*				m_thread;
 		std::string			m_callBackURL;
+		Logger*				m_logger;
 };
 
 #endif

@@ -79,6 +79,7 @@ class NotificationSubscription
 		// There can be different subscriptions for the same assetName
 		std::map<std::string, std::vector<SubscriptionElement>>
 					m_subscriptions;
+		Logger*			m_logger;
 };
 
 #endif
