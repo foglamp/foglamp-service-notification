@@ -7,7 +7,6 @@
  *
  * Author: Massimiliano Pinto
  */
-#include <notification_service.h>
 #include <management_api.h>
 #include <management_client.h>
 #include <service_record.h>
@@ -16,6 +15,7 @@
 #include <iostream>
 #include <string>
 #include <notification_manager.h>
+#include <notification_service.h>
 #include <rule_plugin.h>
 #include <delivery_plugin.h>
 #include <string.h>
@@ -177,6 +177,7 @@ string NotificationInstance::toJSON()
 
 	return ret.str();
 }
+
 /**
  * Constructor for the NotificationManager class
  *
@@ -423,6 +424,7 @@ string NotificationManager::getJSONInstances() const
 		  it != m_instances.end();
 		  ++it)
 	{
+		// Get instance JSON string
 		ret += (it->second)->toJSON();
 		if (std::next(it) != m_instances.end())
 		{
@@ -803,4 +805,143 @@ bool NotificationInstance::handleState(bool evalRet)
 	}
 
 	return ret;
+}
+
+/**
+ * Return JSON string of a notification rule object
+ *
+ * @return      A JSON string representation of the rule
+ */
+string NotificationRule::toJSON()
+{
+	ostringstream ret;
+
+	ret << "{\"name\": \"" << this->getName() << "\", \"plugin\": {\"name\": \"";
+	ret << this->getPlugin()->getName() << "\", \"builtin\": ";
+	ret << (this->getPlugin()->isBuiltin() ? "true" : "false");
+	ret << " } }";
+
+	return ret.str();
+}
+
+/**
+ * Return JSON string of a notification delivery object
+ *
+ * @return      A JSON string representation of the delivery
+ */
+string NotificationDelivery::toJSON()
+{
+	ostringstream ret;
+
+	ret << "{\"name\": \"" << this->getName() << "\", \"plugin\": {\"name\": \"";
+	ret << this->getPlugin()->getName() << "\"";
+	ret << " } }";
+
+	return ret.str();
+}
+
+/**
+ * Return a JSON string with current loaded notification rules
+ *
+ * @return	JSON string with all loaded rules
+ */
+string NotificationManager::getJSONRules() const
+{
+	string ret = "";
+	for (auto it = m_instances.begin();
+		  it != m_instances.end();
+		  ++it)
+	{
+		if ((it->second)->getRule())
+		{
+			// Get rule JSON string
+			ret += (it->second)->getRule()->toJSON();
+
+			if (std::next(it) != m_instances.end())
+			{
+				ret += ", ";
+			}
+		}
+	}
+	return ret;
+}
+
+/**
+ * Return a JSON string with current loaded notification delivery objects
+ *
+ * @return	JSON string with all loaded delivery objects
+ */
+string NotificationManager::getJSONDelivery() const
+{
+	string ret = "";
+	for (auto it = m_instances.begin();
+		  it != m_instances.end();
+		  ++it)
+	{
+		if ((it->second)->getDelivery())
+		{
+			// Get delivery JSON string
+			ret += (it->second)->getDelivery()->toJSON();
+
+			if (std::next(it) != m_instances.end())
+			{
+				ret += ", ";
+			}
+		}
+	}
+	return ret;
+}
+
+/**
+ * Creates an empty, disabled notification category
+ * within the Notifications parent.
+ *
+ * @param    name	The notification instance to create
+ * @return		True on success, false otherwise
+ */
+bool NotificationManager::createInstance(const string& name)
+{
+	bool ret = false;
+
+	// Create an empty Notification category
+	string payload = "{\"name\" : {\"description\" : \"The name of this notification\", "
+			 "\"type\" : \"string\", \"default\": \"Notification " + name + "\"}, ";
+	payload += "\"description\" :{\"description\" : \"Description of this notification\", "
+			 "\"type\": \"string\", \"default\": \"\"}, "
+			 "\"rule\" : {\"description\": \"Rule to evaluate\", "
+			 "\"type\": \"string\", \"default\": \"\"}, "
+			 "\"channel\": {\"description\": \"Channel to send alert on\", "
+			 "\"type\": \"string\", \"default\": \"\"}, "
+			 "\"type\": {\"description\": \"Type of notification\", \"type\": "
+			 "\"enumeration\", \"options\": [ \"one shot\", \"retriggered\", \"toggled\" ], "
+			 "\"default\" : \"one shot\"}, "
+			 "\"enable\": {\"description\" : \"Enabled\", "
+			 "\"type\": \"boolean\", \"default\": \"false\"}}";
+
+	DefaultConfigCategory notificationConfig(name, payload);
+	notificationConfig.setDescription("Notification " + name);
+	// Pass false and remove any existiug data
+	if (m_managerClient->addCategory(notificationConfig, false))
+	{
+		this->addInstance(name,
+				  false,
+				  NOTIFICATION_TYPE::OneShot,
+				  NULL,
+				  NULL);
+	
+		this->registerCategory(name);
+		ret = true;
+	}	
+	return ret;
+}
+
+/**
+ * Register interest for a given category name
+ *
+ * @param    name	The category name
+ */
+void NotificationManager::registerCategory(const string& name)
+{
+	// TODO
+	// Add interaction with service and config handler
 }
