@@ -37,7 +37,7 @@ void notificationReceiveWrapper(shared_ptr<HttpServer::Response> response,
 }
 
 /**
- * Wrapper for GET /foglamp/notification
+ * Wrapper for GET /notification
  *
  * Reply to caller with a JSON string of all loaded Notification instances
  *
@@ -54,7 +54,7 @@ void notificationGetInstances(shared_ptr<HttpServer::Response> response,
 }
 
 /**
- * Wrapper for GET /foglamp/notification/rules
+ * Wrapper for GET /notification/rules
  *
  * Return a list of all the rules that are available on the notification server.
  * This is a list of all the built in rules and all the
@@ -70,7 +70,7 @@ void notificationGetRules(shared_ptr<HttpServer::Response> response,
 }
 
 /**
- * Wrapper for GET /foglamp/notification/delivery
+ * Wrapper for GET /notification/delivery
  *
  * Return the list of delivery mechanisms, i.e. plugins,
  * installed on the notification service.
