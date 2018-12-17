@@ -108,7 +108,6 @@ class NotificationElement
  * @param    plugin		The Notification rule, builtin or
  *				a dynamically loaded plugin.
  */
- 
 class NotificationRule : public NotificationElement
 {
 	public:
@@ -118,17 +117,18 @@ class NotificationRule : public NotificationElement
 		~NotificationRule();
 		RulePlugin*		getPlugin() { return m_plugin; };
 		// Get all asset names
-		vector<NotificationDetail>&
+		std::vector<NotificationDetail>&
 					getAssets() { return m_assets; };
 		// Add an asset name
 		void			addAsset(NotificationDetail& info)
 		{
 			m_assets.push_back(info);
 		};
+		std::string		toJSON();
 
 	private:
 		RulePlugin*		m_plugin;
-		vector<NotificationDetail>
+		std::vector<NotificationDetail>
 					m_assets;
 };
 
@@ -151,6 +151,7 @@ class NotificationDelivery : public NotificationElement
 		~NotificationDelivery();
 		DeliveryPlugin*		getPlugin() { return m_plugin; };
 		const std::string&	getText() const { return m_text; };
+		std::string		toJSON();
 
 	private:
 		DeliveryPlugin*		m_plugin;
@@ -181,10 +182,10 @@ class NotificationInstance
 		{
 			return (m_delivery ? m_delivery->getPlugin() : NULL);
 		};
-		string			toJSON();
+		std::string		toJSON();
 		bool			isEnabled() const { return m_enable; };
 		NotificationType	getType() const { return m_type; };
-		string			getTypeString(NotificationType type);
+		std::string		getTypeString(NotificationType type);
 		bool			handleState(bool evalRet);
 
 	private:
@@ -215,17 +216,21 @@ class NotificationManager
 		std::map<std::string, NotificationInstance *>&
 					getInstances() { return m_instances; };
 		NotificationInstance*	getNotificationInstance(const std::string& instanceName) const;
-		NOTIFICATION_TYPE	parseType(const string& type);
-		RulePlugin*		createRulePlugin(const string& rulePluginName);
-		DeliveryPlugin*		createDeliveryPlugin(const string& deliveryPluginName);
+		NOTIFICATION_TYPE	parseType(const std::string& type);
+		RulePlugin*		createRulePlugin(const std::string& rulePluginName);
+		DeliveryPlugin*		createDeliveryPlugin(const std::string& deliveryPluginName);
+		std::string		getJSONRules() const;
+		std::string		getJSONDelivery() const;
+		bool			createInstance(const std::string& name);
+		void			registerCategory(const std::string& categoryName);
 
 	private:
-		PLUGIN_HANDLE		loadRulePlugin(const string& rulePluginName);
-		PLUGIN_HANDLE		loadDeliveryPlugin(const string& deliveryPluginName);
-		RulePlugin*		findBuiltinRule(const string& rulePluginName);
+		PLUGIN_HANDLE		loadRulePlugin(const std::string& rulePluginName);
+		PLUGIN_HANDLE		loadDeliveryPlugin(const std::string& deliveryPluginName);
+		RulePlugin*		findBuiltinRule(const std::string& rulePluginName);
 		template<typename T> void
 					registerBuiltinRule(const std::string& ruleName);
-		void			addInstance(const string& instanceName,
+		void			addInstance(const std::string& instanceName,
 						    bool enable,
 						    NOTIFICATION_TYPE type,
 						    NotificationRule* rule,

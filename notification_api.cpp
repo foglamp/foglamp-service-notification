@@ -15,7 +15,6 @@
 #include "notification_subscription.h"
 #include "notification_queue.h"
 
-
 NotificationApi* NotificationApi::m_instance = 0;
 
 using namespace std;
@@ -24,6 +23,8 @@ using HttpClient = SimpleWeb::Client<SimpleWeb::HTTP>;
 
 /**
  * Wrapper function for the notification POST callback API call.
+ *
+ * POST /notification/reading/asset/{assetName}
  *
  * @param response	The response stream to send the response on
  * @param request	The HTTP request
@@ -37,6 +38,7 @@ void notificationReceiveWrapper(shared_ptr<HttpServer::Response> response,
 
 /**
  * Wrapper for GET /notification
+ *
  * Reply to caller with a JSON string of all loaded Notification instances
  *
  * @param response	The response stream to send the response on
@@ -46,8 +48,54 @@ void notificationGetInstances(shared_ptr<HttpServer::Response> response,
 			      shared_ptr<HttpServer::Request> request)
 {
 	NotificationApi* api = NotificationApi::getInstance();
-	api->getInstances(response, request);
+	api->getNotificationObject(NotificationApi::ObjGetNotificationsAll,
+				   response,
+				   request);
 }
+
+/**
+ * Wrapper for GET /notification/rules
+ *
+ * Return a list of all the rules that are available on the notification server.
+ * This is a list of all the built in rules and all the
+ * currently loaded rules plugins.
+*/
+void notificationGetRules(shared_ptr<HttpServer::Response> response,
+			  shared_ptr<HttpServer::Request> request)
+{
+	NotificationApi* api = NotificationApi::getInstance();
+	api->getNotificationObject(NotificationApi::ObjGetRulesAll,
+				   response,
+				   request);
+}
+
+/**
+ * Wrapper for GET /notification/delivery
+ *
+ * Return the list of delivery mechanisms, i.e. plugins,
+ * installed on the notification service.
+ */
+void notificationGetDelivery(shared_ptr<HttpServer::Response> response,
+			     shared_ptr<HttpServer::Request> request)
+{
+	NotificationApi* api = NotificationApi::getInstance();
+	api->getNotificationObject(NotificationApi::ObjGetDeliveryAll,
+				   response,
+				   request);
+}
+
+/**
+ * Wrapper for POST /notification/{notificationName}
+ */
+void notificationCreateNotification(shared_ptr<HttpServer::Response> response,
+				    shared_ptr<HttpServer::Request> request)
+{
+	NotificationApi* api = NotificationApi::getInstance();
+	api->getNotificationObject(NotificationApi::ObjCreateNotification,
+				   response,
+				   request);
+}
+
 /**
  * Construct the singleton Notification API
  *
@@ -151,6 +199,9 @@ void NotificationApi::initResources()
 {       
 	m_server->resource[RECEIVE_NOTIFICATION]["POST"] = notificationReceiveWrapper;
 	m_server->resource[GET_NOTIFICATION_INSTANCES]["GET"] = notificationGetInstances;
+	m_server->resource[GET_NOTIFICATION_RULES]["GET"] = notificationGetRules;
+	m_server->resource[GET_NOTIFICATION_DELIVERY]["GET"] = notificationGetDelivery;
+	m_server->resource[POST_NOTIFICATION_NAME]["POST"] = notificationCreateNotification;
 }
 
 /**
@@ -290,30 +341,62 @@ bool NotificationApi::queueNotification(const string& assetName,
 }
 
 /**
- * Return JSON string of all loaded instances
+ * Return JSON string of a notification object
  *
- * @param response	The response stream to send the response on
- * @param request	The HTTP request
+ * @param object	The requested object type
+ * @param response      The response stream to send the response on
+ * @param request       The HTTP request
  */
-void NotificationApi::getInstances(shared_ptr<HttpServer::Response> response,
-				   shared_ptr<HttpServer::Request> request)
+void NotificationApi::getNotificationObject(NOTIFICATION_OBJECT object,
+					    shared_ptr<HttpServer::Response> response,
+					    shared_ptr<HttpServer::Request> request)
 {
 	string responsePayload;
 	// Get NotificationManager instance
 	NotificationManager* manager = NotificationManager::getInstance();
 	if (manager)
 	{
-		// Get all Notification instances
-		responsePayload = "{ \"notifications\": [" + manager->getJSONInstances()  + "] }";
-		this->respond(response,
-			      responsePayload);
+		switch (object)
+		{
+		case ObjGetRulesAll:
+			responsePayload = manager->getJSONRules();
+			// Get all Notification rules
+			break;
+
+		case ObjGetDeliveryAll:
+			// Get all Notification delivery
+			responsePayload = manager->getJSONDelivery();
+			break;
+
+		case ObjGetNotificationsAll:
+			// Get all Notifications
+			responsePayload = "{ \"notifications\": [" + \
+					  manager->getJSONInstances()  + \
+					  "] }";
+			break;
+
+		case ObjCreateNotification:
+			{
+				string name = request->path_match[NOTIFICATION_NAME_COMPONENT];
+				this->createNotification(name);
+			}
+			break;
+
+		default:
+			responsePayload = "{ \"error\": \"Unknown Notification object requested.\" }";
+			break;
+		}
+
+		// Return notification oject to client
+		this->respond(response, responsePayload);
 	}
-	else
+        else
 	{
-		responsePayload = "{ \"error\": \"NotificationManager not yet available.\" }";
-		this->respond(response,
-			      SimpleWeb::StatusCode::server_error_internal_server_error,
-			      responsePayload);
+			// Return error to client
+			responsePayload = "{ \"error\": \"NotificationManager not yet available.\" }";
+			this->respond(response,
+				      SimpleWeb::StatusCode::server_error_internal_server_error,
+				      responsePayload);
 	}
 }
 
@@ -326,4 +409,24 @@ void NotificationApi::setCallBackURL()
 	m_callBackURL = "http://127.0.0.1:" + to_string(apiPort) + "/notification/reading/asset/";
 
 	m_logger->debug("Notification service: callBackURL prefix is " + m_callBackURL);
+}
+
+/**
+ * Creates an empty, disabled notification category
+ * within the Notifications parent.
+ *
+ * @param    name		The instance name to create
+ */
+bool NotificationApi::createNotification(const string& name)
+{
+
+	bool ret = false;
+
+	// Get NotificationManager instance
+	NotificationManager* manager = NotificationManager::getInstance();
+	if (manager)
+	{
+		manager->createInstance(name);
+	}
+	return ret;
 }

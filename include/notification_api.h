@@ -21,11 +21,36 @@ using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
  */
 #define RECEIVE_NOTIFICATION		"^/notification/reading/asset/([A-Za-z][a-zA-Z0-9_]*)$"
 #define GET_NOTIFICATION_INSTANCES	"^/notification$"
-#define ASSET_NAME_COMPONENT	1
+#define GET_NOTIFICATION_DELIVERY	"^/notification/delivery$"
+#define GET_NOTIFICATION_RULES		"^/notification/rules$"
+#define POST_NOTIFICATION_NAME		"^/notification/([A-Za-z][a-zA-Z0-9_])*$"
+#define POST_NOTIFICATION		"^/notification$"
+#define POST_NOTIFICATION_RULE_NAME	"^/notification//([A-Za-z][a-zA-Z0-9_]*)/rule//([A-Za-z][a-zA-Z0-9_]*)$"
+#define POST_NOTIFICATION_DELIVERY_NAME	"^/notification//([A-Za-z][a-zA-Z0-9_]*)/delivery//([A-Za-z][a-zA-Z0-9_]*)$"
+#define ASSET_NAME_COMPONENT		1
+#define NOTIFICATION_NAME_COMPONENT	1
+#define RULE_NAME_COMPONENT		2
+#define DELIVERY_NAME_COMPONENT		2
 
+/**
+ * NotificationApi is the entry point for:
+ * - Service API
+ * - Administration API
+ * - notifications received from storage service
+ */
 class NotificationApi
 {
 	public:
+		typedef enum
+		{
+			ObjNone,
+			ObjGetRulesAll,
+			ObjGetDeliveryAll,
+			ObjGetNotificationsAll,
+			ObjGetNotificationName,
+			ObjCreateNotification
+		} NOTIFICATION_OBJECT;
+
 		NotificationApi(const unsigned short port,
 				const unsigned int threads);
 		~NotificationApi();
@@ -39,8 +64,10 @@ class NotificationApi
 		unsigned short	getListenerPort();
 		void		processCallback(shared_ptr<HttpServer::Response> response,
 						shared_ptr<HttpServer::Request> request);
-		void		getInstances(shared_ptr<HttpServer::Response> response,
-                                                shared_ptr<HttpServer::Request> request);
+		void		getNotificationObject(NOTIFICATION_OBJECT object,
+						      shared_ptr<HttpServer::Response> response,
+						      shared_ptr<HttpServer::Request> request);
+		bool		createNotification(const string& notificationName);
 		const std::string&
 				getCallBackURL() const { return m_callBackURL; };
 		void		setCallBackURL();
