@@ -7,7 +7,6 @@
  *
  * Author: Massimiliano Pinto
  */
-#include <notification_service.h>
 #include <management_api.h>
 #include <management_client.h>
 #include <service_record.h>
@@ -17,7 +16,12 @@
 #include <logger.h>
 #include <iostream>
 #include <string>
+
+#include <storage_client.h>
+#include <config_handler.h>
+#include <notification_service.h>
 #include <notification_manager.h>
+#include <notification_queue.h>
 #include <notification_subscription.h>
 
 using namespace std;
@@ -48,8 +52,6 @@ NotificationService::NotificationService(const string& myName) :
 	// Set NULL for other resources
 	m_managerClient = NULL;
 	m_managementApi = NULL;
-	m_queue = NULL;
-	m_subscription = NULL;
 }
 
 /**
@@ -57,8 +59,6 @@ NotificationService::NotificationService(const string& myName) :
  */
 NotificationService::~NotificationService()
 {
-	delete m_queue;
-	delete m_subscription;
 	delete m_api;
 	delete m_managerClient;
 	delete m_managementApi;
@@ -182,7 +182,7 @@ bool NotificationService::start(string& coreAddress,
 
 	// Setup NotificationManager class
 	bool nLoaded = false;
-	NotificationManager instances(m_name, m_managerClient);
+	NotificationManager instances(m_name, m_managerClient, this);
 	try
 	{
 		// Get all notification instances under Notifications
@@ -217,12 +217,12 @@ bool NotificationService::start(string& coreAddress,
 
 	// We have notitication instances loaded
 	// (1) Start the NotificationQueue
-	m_queue = new NotificationQueue(m_name);
+	NotificationQueue queue(m_name);
 
 	// (2) Register notification interest, per assetName:
 	// by call Storage layer Notification API.
-	m_subscription = new NotificationSubscription(m_name, storageClient);
-	m_subscription->registerSubscriptions();
+	NotificationSubscription subscriptions(m_name, storageClient);
+	subscriptions.registerSubscriptions();
 
 	// Notification data will be now received via NotificationApi server
 	// and added into the queue for processing.
@@ -236,7 +236,7 @@ bool NotificationService::start(string& coreAddress,
 	// NOTE:
 	// - Notification API listener is already down.
 	// - all subscriptions already unregistered
-	m_subscription->unregisterSubscriptions();
+	subscriptions.unregisterSubscriptions();
 
 	// Unregister from storage service
 	m_managerClient->unregisterService();
@@ -245,7 +245,7 @@ bool NotificationService::start(string& coreAddress,
 	m_managementApi->stop();
 
 	// Flush all data in the queue
-	m_queue->stop();
+	queue.stop();
 
 	m_logger->info("Notification service '" + m_name + "' shutdown completed.");
 
@@ -261,9 +261,10 @@ void NotificationService::stop()
 	m_logger->info("Stopping Notification service '" + m_name + "' ...");
 
 	// Unregister notifications to storage service
-	if (m_subscription)
+	NotificationSubscription* subscriptions = NotificationSubscription::getInstance();
+	if (subscriptions)
 	{
-		m_subscription->unregisterSubscriptions();
+		subscriptions->unregisterSubscriptions();
 	}
 
 	// Stop the NotificationApi
@@ -298,4 +299,19 @@ void NotificationService::cleanupResources()
 void NotificationService::configChange(const string& categoryName,
 				       const string& category)
 {
+	NotificationManager* instance = NotificationManager::getInstance();
+}
+
+/**
+ * Register a configuration category for updates
+ *
+ * @param    categoryName	The category to register
+ */
+void NotificationService::registerCategory(const string& categoryName)
+{
+	ConfigHandler* configHandler = ConfigHandler::getInstance(m_managerClient);
+	if (configHandler)
+	{
+		configHandler->registerCategory(this, categoryName);
+	}
 }

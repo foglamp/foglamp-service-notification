@@ -14,6 +14,7 @@
 #include <management_client.h>
 #include <rule_plugin.h>
 #include <delivery_plugin.h>
+#include <notification_service.h>
 
 // Notification type repeat frequency
 #define DEFAULT_RETRIGGER_FREQUENCY 60
@@ -206,6 +207,10 @@ class NotificationManager
 	public:
 		NotificationManager(const std::string& notificationName,
 				    ManagementClient* managerClient);
+
+		NotificationManager(const std::string& notificationName,
+				    ManagementClient* managerClient,
+				    NotificationService* service);
 		~NotificationManager();
 
 		const std::string&	getName() const { return m_name; };
@@ -221,8 +226,9 @@ class NotificationManager
 		DeliveryPlugin*		createDeliveryPlugin(const std::string& deliveryPluginName);
 		std::string		getJSONRules() const;
 		std::string		getJSONDelivery() const;
-		bool			createInstance(const std::string& name);
-		void			registerCategory(const std::string& categoryName);
+		bool			createEmptyInstance(const std::string& name);
+		bool			createRule(const std::string& name);
+		bool			createDelivery(const std::string& name);
 
 	private:
 		PLUGIN_HANDLE		loadRulePlugin(const std::string& rulePluginName);
@@ -245,6 +251,7 @@ class NotificationManager
 					m_instances;
 		std::map<std::string, BUILTIN_RULE_FN>
 					m_builtinRules;
+		NotificationService*	m_service;
 		Logger*			m_logger;
 };
 #endif

@@ -177,7 +177,7 @@ void NotificationApi::stopServer() {
 }
 
 /**
- * API stop entery poiunt
+ * API stop entery point
  */
 void NotificationApi::stop()
 {
@@ -426,7 +426,7 @@ bool NotificationApi::createNotification(const string& name)
 	NotificationManager* manager = NotificationManager::getInstance();
 	if (manager)
 	{
-		manager->createInstance(name);
+		manager->createEmptyInstance(name);
 	}
 	return ret;
 }
