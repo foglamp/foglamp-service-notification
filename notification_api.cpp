@@ -15,7 +15,6 @@
 #include "notification_subscription.h"
 #include "notification_queue.h"
 
-
 NotificationApi* NotificationApi::m_instance = 0;
 
 using namespace std;
@@ -49,7 +48,7 @@ void notificationGetInstances(shared_ptr<HttpServer::Response> response,
 			      shared_ptr<HttpServer::Request> request)
 {
 	NotificationApi* api = NotificationApi::getInstance();
-	api->getNotificationObject(NotificationApi::ObjNotificationsAll,
+	api->getNotificationObject(NotificationApi::ObjGetNotificationsAll,
 				   response,
 				   request);
 }
@@ -65,7 +64,7 @@ void notificationGetRules(shared_ptr<HttpServer::Response> response,
 			  shared_ptr<HttpServer::Request> request)
 {
 	NotificationApi* api = NotificationApi::getInstance();
-	api->getNotificationObject(NotificationApi::ObjRulesAll,
+	api->getNotificationObject(NotificationApi::ObjGetRulesAll,
 				   response,
 				   request);
 }
@@ -80,25 +79,14 @@ void notificationGetDelivery(shared_ptr<HttpServer::Response> response,
 			     shared_ptr<HttpServer::Request> request)
 {
 	NotificationApi* api = NotificationApi::getInstance();
-	api->getNotificationObject(NotificationApi::ObjDeliveryAll,
+	api->getNotificationObject(NotificationApi::ObjGetDeliveryAll,
 				   response,
 				   request);
 }
 
 /**
- * Wrapper for GET /foglamp/notification/{notificationName}
- *
- * Return a details of a particualr notification
+ * Wrapper for POST /notification/{notificationName}
  */
-void notificationGetInstanceName(shared_ptr<HttpServer::Response> response,
-			     shared_ptr<HttpServer::Request> request)
-{
-	NotificationApi* api = NotificationApi::getInstance();
-	api->getNotificationObject(NotificationApi::ObjNotificationName,
-				   response,
-				   request);
-}
-
 void notificationCreateNotification(shared_ptr<HttpServer::Response> response,
 				    shared_ptr<HttpServer::Request> request)
 {
@@ -213,7 +201,6 @@ void NotificationApi::initResources()
 	m_server->resource[GET_NOTIFICATION_INSTANCES]["GET"] = notificationGetInstances;
 	m_server->resource[GET_NOTIFICATION_RULES]["GET"] = notificationGetRules;
 	m_server->resource[GET_NOTIFICATION_DELIVERY]["GET"] = notificationGetDelivery;
-	m_server->resource[GET_NOTIFICATION_NAME]["GET"] = notificationGetInstanceName;
 	m_server->resource[POST_NOTIFICATION_NAME]["POST"] = notificationCreateNotification;
 }
 
@@ -372,13 +359,13 @@ void NotificationApi::getNotificationObject(NOTIFICATION_OBJECT object,
 		switch (object)
 		{
 		case ObjGetRulesAll:
-			responsePayload = "[" + manager->getJSONRules() + "]";
+			responsePayload = manager->getJSONRules();
 			// Get all Notification rules
 			break;
 
 		case ObjGetDeliveryAll:
-			// Get all Notification ddelivery
-			responsePayload = "[" + manager->getJSONDelivery() + "]";
+			// Get all Notification delivery
+			responsePayload = manager->getJSONDelivery();
 			break;
 
 		case ObjGetNotificationsAll:
@@ -388,22 +375,10 @@ void NotificationApi::getNotificationObject(NOTIFICATION_OBJECT object,
 					  "] }";
 			break;
 
-		case ObjGetNotificationName:
+		case ObjCreateNotification:
 			{
-				// Get the specified Notification
 				string name = request->path_match[NOTIFICATION_NAME_COMPONENT];
-				NotificationInstance* found = manager->getNotificationInstance(name);
-				if (found)
-				{
- 					responsePayload = "{ \"notification\": " + \
-							  found->toJSON() + \
-							  " }";
-				}
-				else
-				{
-					responsePayload = "{ \"error\": \"Notification '" + \
-							  name + "' not found\" }";
-				}
+				this->createNotification(name);
 			}
 			break;
 
@@ -444,5 +419,14 @@ void NotificationApi::setCallBackURL()
  */
 bool NotificationApi::createNotification(const string& name)
 {
-	return false;
+
+	bool ret = false;
+
+	// Get NotificationManager instance
+	NotificationManager* manager = NotificationManager::getInstance();
+	if (manager)
+	{
+		manager->createInstance(name);
+	}
+	return ret;
 }
