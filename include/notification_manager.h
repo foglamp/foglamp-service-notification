@@ -206,9 +206,6 @@ class NotificationManager
 {
 	public:
 		NotificationManager(const std::string& notificationName,
-				    ManagementClient* managerClient);
-
-		NotificationManager(const std::string& notificationName,
 				    ManagementClient* managerClient,
 				    NotificationService* service);
 		~NotificationManager();
