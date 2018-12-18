@@ -14,8 +14,8 @@
 #include <plugin.h>
 #include <iostream>
 #include <string>
+
 #include <notification_manager.h>
-#include <notification_service.h>
 #include <rule_plugin.h>
 #include <delivery_plugin.h>
 #include <string.h>
@@ -183,13 +183,15 @@ string NotificationInstance::toJSON()
  *
  * @param    serviceName	Notification service name
  * @param    managerClient	Pointer to ManagementClient
+ * @param    service		Pointer to Notification service
  */
-NotificationManager::NotificationManager(const string& serviceName,
-					 ManagementClient* managerClient) :
+NotificationManager::NotificationManager(const std::string& serviceName,
+					 ManagementClient* managerClient,
+					 NotificationService* service) :
 					 m_name(serviceName),
-					 m_managerClient(managerClient)
+					 m_managerClient(managerClient),
+					 m_service(service)
 {
-	// Set instance
 	NotificationManager::m_instance = this;
 
 	// Get logger
@@ -816,10 +818,9 @@ string NotificationRule::toJSON()
 {
 	ostringstream ret;
 
-	ret << "{\"name\": \"" << this->getName() << "\", \"plugin\": {\"name\": \"";
-	ret << this->getPlugin()->getName() << "\", \"builtin\": ";
-	ret << (this->getPlugin()->isBuiltin() ? "true" : "false");
-	ret << " } }";
+	ret << "{\"" << this->getPlugin()->getName() << "\": ";
+	ret << this->getPlugin()->getInfo()->config;
+	ret << " }";
 
 	return ret.str();
 }
@@ -833,9 +834,9 @@ string NotificationDelivery::toJSON()
 {
 	ostringstream ret;
 
-	ret << "{\"name\": \"" << this->getName() << "\", \"plugin\": {\"name\": \"";
-	ret << this->getPlugin()->getName() << "\"";
-	ret << " } }";
+	ret << "{\"" << this->getPlugin()->getName() << "\": ";
+	ret << this->getPlugin()->getInfo()->config;
+	ret << " }";
 
 	return ret.str();
 }
@@ -899,7 +900,7 @@ string NotificationManager::getJSONDelivery() const
  * @param    name	The notification instance to create
  * @return		True on success, false otherwise
  */
-bool NotificationManager::createInstance(const string& name)
+bool NotificationManager::createEmptyInstance(const string& name)
 {
 	bool ret = false;
 
@@ -920,28 +921,164 @@ bool NotificationManager::createInstance(const string& name)
 
 	DefaultConfigCategory notificationConfig(name, payload);
 	notificationConfig.setDescription("Notification " + name);
-	// Pass false and remove any existiug data
+
+	// Don't update any existing configuration, just replace all 
 	if (m_managerClient->addCategory(notificationConfig, false))
 	{
+		// Create the empty Notification instance
 		this->addInstance(name,
 				  false,
 				  NOTIFICATION_TYPE::OneShot,
 				  NULL,
 				  NULL);
-	
-		this->registerCategory(name);
-		ret = true;
+
+		try
+		{
+			// Add the category name under "Notifications" parent category
+			vector<string> children;
+			children.push_back(name);
+			m_managerClient->addChildCategories("Notifications",
+							    children);
+			// Register category for configuration updates
+			m_service->registerCategory(name);
+
+			// Success
+			ret = true;
+		}
+		catch (std::exception* ex)
+		{
+			delete ex;
+		}
 	}	
 	return ret;
 }
 
 /**
- * Register interest for a given category name
+ * Create a rule subcategory for the notification
+ * with the template content for the given rule.
  *
- * @param    name	The category name
+ * @param    name	The notification name 
+ * @param    rule	The notification rule to create
+ * @return		True on success, false otherwise
  */
-void NotificationManager::registerCategory(const string& name)
+bool NotificationManager::createRuleCategory(const string& name,
+					     const string& rule)
 {
-	// TODO
-	// Add interaction with service and config handler
+        bool ret = true;
+	RulePlugin* rulePlugin = this->createRulePlugin(rule);
+
+	if (!rulePlugin)
+	{
+		return false;
+	}
+
+	// Create category names for plugins under instanceName
+	// with names: "rule" + instanceName
+	string ruleCategoryName = "rule" + name;
+
+	// Get plugins default configuration
+	string rulePluginConfig = rulePlugin->getInfo()->config;
+
+	DefaultConfigCategory ruleDefConfig(ruleCategoryName,
+					    rulePluginConfig);
+
+	// Create category, don't merge existing values
+	if (!m_managerClient->addCategory(ruleDefConfig, false))
+	{
+		string errMsg("Cannot create/update '" + \
+			      ruleCategoryName + "' rule plugin category");
+		m_logger->fatal(errMsg.c_str());
+
+		ret = false;
+	}
+
+	try
+	{
+		// Add ruleCategoryName as child of Notification name
+		vector<string> children;
+		children.push_back(ruleCategoryName);
+		m_managerClient->addChildCategories(name, children);
+
+		// Register category for configuration updates
+		m_service->registerCategory(ruleCategoryName);
+	}
+	catch (std::exception* ex)
+	{
+		delete ex;
+		ret = false;
+	}
+
+	return ret;
+}
+
+/**
+ * Create a delivery subcategory for the notification
+ * with the template content for the given delivery plugin.
+ *
+ * @param    name	The notification name 
+ * @param    delivery	The notification delivery to create
+ * @return		True on success, false otherwise
+ */
+bool NotificationManager::createDeliveryCategory(const string& name,
+						 const string& delivery)
+{
+        bool ret = true;
+
+	DeliveryPlugin* deliveryPlugin = this->createDeliveryPlugin(delivery);
+
+	if (!deliveryPlugin)
+	{
+		return false;
+	}
+
+	// Create category names for plugins under instanceName
+	// with names: "delivery" + instanceName
+	string deliveryCategoryName = "delivery" + name;
+
+	// Get plugins default configuration
+	string deliveryPluginConfig = deliveryPlugin->getInfo()->config;
+
+	DefaultConfigCategory deliveryDefConfig(deliveryCategoryName,
+						deliveryPluginConfig);
+
+	// Create category, don't merge existing values
+	if (!m_managerClient->addCategory(deliveryDefConfig, false))
+	{
+		string errMsg("Cannot create/update '" + \
+			      deliveryCategoryName + "' delivery plugin category");
+		m_logger->fatal(errMsg.c_str());
+
+		ret = false;
+	}
+
+	try
+	{
+		// Add ruleCategoryName as child of Notification name
+		vector<string> children;
+		children.push_back(deliveryCategoryName);
+		m_managerClient->addChildCategories(name, children);
+
+		// Register category for configuration updates
+		m_service->registerCategory(deliveryCategoryName);
+	}
+	catch (std::exception* ex)
+	{
+		delete ex;
+		ret = false;
+	}
+
+	return ret;
+}
+
+/**
+ * Reconfigure a notification instance
+ *
+ * NOTE: not yet implemented
+ *
+ * @param    category		The JSON string with new configuration
+ * @return			True on success, false otherwise.
+ */
+bool NotificationInstance::reconfigure(const string& category)
+{
+	return true;
 }

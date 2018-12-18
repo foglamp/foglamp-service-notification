@@ -41,6 +41,10 @@ RulePlugin::RulePlugin(const std::string& name,
 	pluginReasonPtr = (string (*)(PLUGIN_HANDLE))
 				  manager->resolveSymbol(handle, "plugin_reason");
 
+	pluginReconfigurePtr = (void (*)(PLUGIN_HANDLE, const std::string&))
+					 manager->resolveSymbol(handle,
+								"plugin_reconfigure");
+
 	// Persist data initialised
 	m_plugin_data = NULL;
 }
@@ -136,4 +140,17 @@ PLUGIN_INFORMATION* RulePlugin::getInfo()
 {
 	// Return 'info' member of base class Plugin
 	return this->info;
+}
+
+/**
+ * Call the reconfigure method in the plugin
+ *
+ * @param    newConfig		The new configuration for the plugin
+ */
+void RulePlugin::reconfigure(const string& newConfig)
+{
+	if (this->pluginReconfigurePtr)
+	{
+		return this->pluginReconfigurePtr(m_instance, newConfig);
+	}
 }

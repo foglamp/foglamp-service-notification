@@ -36,6 +36,7 @@ class RulePlugin : public Plugin
 		virtual std::string		reason() const;
 		virtual bool			isBuiltin() const { return false; };
 		virtual PLUGIN_INFORMATION*	getInfo();
+		virtual void			reconfigure(const std::string& newConfig);
 
 	private:
 		PLUGIN_HANDLE			(*pluginInit)(const ConfigCategory* config);
@@ -44,6 +45,8 @@ class RulePlugin : public Plugin
 		bool				(*pluginEvalPtr)(PLUGIN_HANDLE,
 								 const std::string& assetValues);
 		std::string			(*pluginReasonPtr)(PLUGIN_HANDLE);
+		void				(*pluginReconfigurePtr)(PLUGIN_HANDLE,
+									const std::string& newConfig);
 
 	public:
 		// Persist plugin data

@@ -97,6 +97,30 @@ void notificationCreateNotification(shared_ptr<HttpServer::Response> response,
 }
 
 /**
+ * Wrapper for POST /notification/{NotificationName}/rule/{RuleName}
+ */
+void notificationCreateNotificationRule(shared_ptr<HttpServer::Response> response,
+				    shared_ptr<HttpServer::Request> request)
+{
+	NotificationApi* api = NotificationApi::getInstance();
+	api->getNotificationObject(NotificationApi::ObjCreateNotificationRule,
+				   response,
+				   request);
+}
+
+/**
+ * Wrapper for POST /notification/{NotificationName}/delivery/{DeliveryName}
+ */
+void notificationCreateNotificationDelivery(shared_ptr<HttpServer::Response> response,
+				    shared_ptr<HttpServer::Request> request)
+{
+	NotificationApi* api = NotificationApi::getInstance();
+	api->getNotificationObject(NotificationApi::ObjCreateNotificationDelivery,
+				   response,
+				   request);
+}
+
+/**
  * Construct the singleton Notification API
  *
  * @param    port	Listening port (0 = automatically set)
@@ -177,7 +201,7 @@ void NotificationApi::stopServer() {
 }
 
 /**
- * API stop entery poiunt
+ * API stop entery point
  */
 void NotificationApi::stop()
 {
@@ -202,6 +226,8 @@ void NotificationApi::initResources()
 	m_server->resource[GET_NOTIFICATION_RULES]["GET"] = notificationGetRules;
 	m_server->resource[GET_NOTIFICATION_DELIVERY]["GET"] = notificationGetDelivery;
 	m_server->resource[POST_NOTIFICATION_NAME]["POST"] = notificationCreateNotification;
+	m_server->resource[POST_NOTIFICATION_RULE_NAME]["POST"] = notificationCreateNotificationRule;
+	m_server->resource[POST_NOTIFICATION_DELIVERY_NAME]["POST"] = notificationCreateNotificationDelivery;
 }
 
 /**
@@ -378,7 +404,32 @@ void NotificationApi::getNotificationObject(NOTIFICATION_OBJECT object,
 		case ObjCreateNotification:
 			{
 				string name = request->path_match[NOTIFICATION_NAME_COMPONENT];
-				this->createNotification(name);
+				bool ret = this->createNotification(name);
+				responsePayload = ret ?
+						  "{\"message\": \"created\"}" :
+						  "{\"error\": \"create notification failure\"}";
+			}
+			break;
+
+		case ObjCreateNotificationRule:
+			{
+				string name = request->path_match[NOTIFICATION_NAME_COMPONENT];
+				string rule = request->path_match[RULE_NAME_COMPONENT];
+				bool ret = this->createNotificationRule(name, rule);
+				responsePayload = ret ?
+						 "{\"message\": \"created\"}" :
+						 "{\"error\": \"create rule failure\"}";
+			}
+			break;
+
+		case ObjCreateNotificationDelivery:
+			{
+				string name = request->path_match[NOTIFICATION_NAME_COMPONENT];
+				string delivery = request->path_match[DELIVERY_NAME_COMPONENT];
+				bool ret = this->createNotificationDelivery(name, delivery);
+				responsePayload = ret ?
+						 "{\"message\": \"created\"}" :
+						  "{\"error\": \"create delivery failure\"}";;
 			}
 			break;
 
@@ -415,7 +466,8 @@ void NotificationApi::setCallBackURL()
  * Creates an empty, disabled notification category
  * within the Notifications parent.
  *
- * @param    name		The instance name to create
+ * @param    name		The Notification category to create
+ * @return			True on success, false otherwise
  */
 bool NotificationApi::createNotification(const string& name)
 {
@@ -426,7 +478,53 @@ bool NotificationApi::createNotification(const string& name)
 	NotificationManager* manager = NotificationManager::getInstance();
 	if (manager)
 	{
-		manager->createInstance(name);
+		ret = manager->createEmptyInstance(name);
 	}
+	return ret;
+}
+
+/**
+ * Create a rule subcategory for the notification
+ * with the template content for the given rule.
+ *
+ * @param    name		The notification category name
+ * @param    rule		The rule subcategory to create
+ * @return			True on success, false otherwise
+ */
+bool NotificationApi::createNotificationRule(const string& name,
+					     const string& rule)
+{
+	bool ret = false;
+
+	// Get NotificationManager instance
+	NotificationManager* manager = NotificationManager::getInstance();
+	if (manager)
+	{
+		ret = manager->createRuleCategory(name, rule);
+	}
+
+	return ret;
+}
+
+/**
+ * Create a delivery subcategory for the notification
+ * with the template content for the given delivery plugin.
+ *
+ * @param    name		The notification category name
+ * @param    delivery		The delivery subcategory to create
+ * @return			True on success, false otherwise
+ */
+bool NotificationApi::createNotificationDelivery(const string& name,
+						 const string& delivery)
+{
+	bool ret = false;
+
+	// Get NotificationManager instance
+	NotificationManager* manager = NotificationManager::getInstance();
+	if (manager)
+	{
+		ret = manager->createDeliveryCategory(name, delivery);
+	}
+
 	return ret;
 }

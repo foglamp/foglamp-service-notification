@@ -10,13 +10,11 @@
  * Author: Massimiliano Pinto
  */
 
-#include <logger.h>
 #include <service_handler.h>
-#include <notification_api.h>
 #include <management_client.h>
 #include <management_api.h>
-#include <notification_subscription.h>
-#include <notification_queue.h>
+
+#include <notification_api.h>
 
 #define SERVICE_NAME		"FogLAMP Notification"
 #define SERVICE_TYPE		"Notification"
@@ -37,6 +35,7 @@ class NotificationService : public ServiceHandler
 		void			cleanupResources();
 		void			configChange(const std::string&,
 						     const std::string&);
+		void			registerCategory(const std::string& categoryName);
 
 	private:
 		const std::string	m_name;
@@ -44,9 +43,6 @@ class NotificationService : public ServiceHandler
 		bool			m_shutdown;
 		NotificationApi*	m_api;
 		ManagementClient* 	m_managerClient;
-		NotificationSubscription*
-					m_subscription;
-		NotificationQueue*	m_queue;
 		ManagementApi*		m_managementApi;
 };
 #endif

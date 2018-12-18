@@ -34,6 +34,10 @@ DeliveryPlugin::DeliveryPlugin(const std::string& name,
 				     manager->resolveSymbol(handle,
 							    "plugin_deliver");
 
+	pluginReconfigurePtr = (void (*)(PLUGIN_HANDLE, const std::string&))
+					 manager->resolveSymbol(handle,
+								"plugin_reconfigure");
+
 	// Persist data initialised
 	m_plugin_data = NULL;
 }
@@ -87,4 +91,17 @@ bool DeliveryPlugin::deliver(const std::string& deliveryName,
 					     message);
 	}
 	return ret;
+}
+
+/**
+ * Call the reconfigure method in the plugin
+ *
+ * @param    newConfig		The new configuration for the plugin
+ */
+void DeliveryPlugin::reconfigure(const string& newConfig)
+{
+	if (this->pluginReconfigurePtr)
+	{
+		return this->pluginReconfigurePtr(m_instance, newConfig);
+	}
 }
