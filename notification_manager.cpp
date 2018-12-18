@@ -818,10 +818,9 @@ string NotificationRule::toJSON()
 {
 	ostringstream ret;
 
-	ret << "{\"name\": \"" << this->getName() << "\", \"plugin\": {\"name\": \"";
-	ret << this->getPlugin()->getName() << "\", \"builtin\": ";
-	ret << (this->getPlugin()->isBuiltin() ? "true" : "false");
-	ret << " } }";
+	ret << "{\"" << this->getPlugin()->getName() << "\": ";
+	ret << this->getPlugin()->getInfo()->config;
+	ret << " }";
 
 	return ret.str();
 }
@@ -955,27 +954,131 @@ bool NotificationManager::createEmptyInstance(const string& name)
 }
 
 /**
- * Creates an empty, notification rule
- * within the Notifications parent.
+ * Create a rule subcategory for the notification
+ * with the template content for the given rule.
  *
- * @param    name       The notification rule to create
- * @return              True on success, false otherwise
+ * @param    name	The notification name 
+ * @param    rule	The notification rule to create
+ * @return		True on success, false otherwise
  */
-bool NotificationManager::createRule(const string& name)
+bool NotificationManager::createRuleCategory(const string& name,
+					     const string& rule)
 {
-        bool ret = false;
+        bool ret = true;
+	RulePlugin* rulePlugin = this->createRulePlugin(rule);
 
+	if (!rulePlugin)
+	{
+		return false;
+	}
+
+	// Create category names for plugins under instanceName
+	// with names: "rule" + instanceName
+	string ruleCategoryName = "rule" + name;
+
+	// Get plugins default configuration
+	string rulePluginConfig = rulePlugin->getInfo()->config;
+
+	DefaultConfigCategory ruleDefConfig(ruleCategoryName,
+					    rulePluginConfig);
+
+	// Create category, don't merge existing values
+	if (!m_managerClient->addCategory(ruleDefConfig, false))
+	{
+		string errMsg("Cannot create/update '" + \
+			      ruleCategoryName + "' rule plugin category");
+		m_logger->fatal(errMsg.c_str());
+
+		ret = false;
+	}
+
+	try
+	{
+		// Add ruleCategoryName as child of Notification name
+		vector<string> children;
+		children.push_back(ruleCategoryName);
+		m_managerClient->addChildCategories(name, children);
+
+		// Register category for configuration updates
+		m_service->registerCategory(ruleCategoryName);
+	}
+	catch (std::exception* ex)
+	{
+		delete ex;
+		ret = false;
+	}
+
+	return ret;
 }
 
 /**
- * Creates an empty, notification delivery
- * within the Notifications parent.
+ * Create a delivery subcategory for the notification
+ * with the template content for the given delivery plugin.
  *
- * @param    name       The notification delivery to create
- * @return              True on success, false otherwise
+ * @param    name	The notification name 
+ * @param    delivery	The notification delivery to create
+ * @return		True on success, false otherwise
  */
-bool NotificationManager::createDelivery(const string& name)
+bool NotificationManager::createDeliveryCategory(const string& name,
+						 const string& delivery)
 {
-        bool ret = false;
+        bool ret = true;
 
+	DeliveryPlugin* deliveryPlugin = this->createDeliveryPlugin(delivery);
+
+	if (!deliveryPlugin)
+	{
+		return false;
+	}
+
+	// Create category names for plugins under instanceName
+	// with names: "delivery" + instanceName
+	string deliveryCategoryName = "delivery" + name;
+
+	// Get plugins default configuration
+	string deliveryPluginConfig = deliveryPlugin->getInfo()->config;
+
+	DefaultConfigCategory deliveryDefConfig(deliveryCategoryName,
+						deliveryPluginConfig);
+
+	// Create category, don't merge existing values
+	if (!m_managerClient->addCategory(deliveryDefConfig, false))
+	{
+		string errMsg("Cannot create/update '" + \
+			      deliveryCategoryName + "' delivery plugin category");
+		m_logger->fatal(errMsg.c_str());
+
+		ret = false;
+	}
+
+	try
+	{
+		// Add ruleCategoryName as child of Notification name
+		vector<string> children;
+		children.push_back(deliveryCategoryName);
+		m_managerClient->addChildCategories(name, children);
+
+		// Register category for configuration updates
+		m_service->registerCategory(deliveryCategoryName);
+	}
+	catch (std::exception* ex)
+	{
+		delete ex;
+		ret = false;
+	}
+
+	return ret;
+}
+
+/**
+ * Reconfigure a notification instance
+ *
+ * NOTE: not yet implemented
+ *
+ * @param    category		The JSON string with new configuration
+ * @return			True on success, false otherwise.
+ */
+bool NotificationInstance::reconfigure(const string& category)
+{
+	return true;
 }

@@ -299,7 +299,52 @@ void NotificationService::cleanupResources()
 void NotificationService::configChange(const string& categoryName,
 				       const string& category)
 {
-	NotificationManager* instance = NotificationManager::getInstance();
+	NotificationManager* notifications = NotificationManager::getInstance();
+	NotificationInstance* instance = NULL;
+
+	std::size_t found;
+
+	std::size_t foundRule = categoryName.find("rule");
+	std::size_t foundDelivery = categoryName.find("delivery");
+	if (foundRule == std::string::npos &&
+	    foundDelivery == std::string::npos)
+	{
+		// It's a notification category
+		instance = notifications->getNotificationInstance(categoryName);
+		if (instance)
+		{
+			instance->reconfigure(category);
+			return;
+		}
+	}
+	else
+	{
+		// Check it's a rule category
+		if (foundRule != std::string::npos)
+		{
+			instance = notifications->getNotificationInstance(categoryName.substr(4));
+			if (instance)
+			{
+				instance->getRulePlugin()->reconfigure(category);
+				return;
+			}
+		}
+		// Check it's a delivery category
+		if (foundDelivery != std::string::npos)
+		{
+			instance = notifications->getNotificationInstance(categoryName.substr(8));
+			if (instance)
+			{
+				instance->getDeliveryPlugin()->reconfigure(category);
+				return;
+			}
+		}
+	}
+
+	if (instance == NULL)
+	{
+		// Log message
+	}
 }
 
 /**

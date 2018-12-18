@@ -28,6 +28,7 @@ class OverMaxRule : public RulePlugin
 		std::string		reason() const;
 		PLUGIN_INFORMATION*	getInfo();
 		bool			isBuiltin() const { return true; };
+		void			reconfigure(const std::string& newConfig);
 };
 
 #endif

@@ -188,6 +188,8 @@ class NotificationInstance
 		NotificationType	getType() const { return m_type; };
 		std::string		getTypeString(NotificationType type);
 		bool			handleState(bool evalRet);
+		bool			reconfigure(const std::string& category);
+
 
 	private:
 		const std::string	m_name;
@@ -224,8 +226,10 @@ class NotificationManager
 		std::string		getJSONRules() const;
 		std::string		getJSONDelivery() const;
 		bool			createEmptyInstance(const std::string& name);
-		bool			createRule(const std::string& name);
-		bool			createDelivery(const std::string& name);
+		bool			createRuleCategory(const std::string& name,
+							   const std::string& rule);
+		bool			createDeliveryCategory(const std::string& name,
+							       const std::string& delivery);
 
 	private:
 		PLUGIN_HANDLE		loadRulePlugin(const std::string& rulePluginName);

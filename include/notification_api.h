@@ -20,13 +20,12 @@ using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
  * URL for each API entry point
  */
 #define RECEIVE_NOTIFICATION		"^/notification/reading/asset/([A-Za-z][a-zA-Z0-9_]*)$"
-#define GET_NOTIFICATION_INSTANCES	"^/notification$"
-#define GET_NOTIFICATION_DELIVERY	"^/notification/delivery$"
-#define GET_NOTIFICATION_RULES		"^/notification/rules$"
-#define POST_NOTIFICATION_NAME		"^/notification/([A-Za-z][a-zA-Z0-9_])*$"
-#define POST_NOTIFICATION		"^/notification$"
-#define POST_NOTIFICATION_RULE_NAME	"^/notification//([A-Za-z][a-zA-Z0-9_]*)/rule//([A-Za-z][a-zA-Z0-9_]*)$"
-#define POST_NOTIFICATION_DELIVERY_NAME	"^/notification//([A-Za-z][a-zA-Z0-9_]*)/delivery//([A-Za-z][a-zA-Z0-9_]*)$"
+#define GET_NOTIFICATION_INSTANCES	"^/foglamp/notification$"
+#define GET_NOTIFICATION_DELIVERY	"^/foglamp/notification/delivery$"
+#define GET_NOTIFICATION_RULES		"^/foglamp/notification/rules$"
+#define POST_NOTIFICATION_NAME		"^/foglamp/notification/([A-Za-z][a-zA-Z0-9_]*)$"
+#define POST_NOTIFICATION_RULE_NAME	"^/foglamp/notification/([A-Za-z][a-zA-Z0-9_]*)/rule/([A-Za-z][a-zA-Z0-9_]*)$"
+#define POST_NOTIFICATION_DELIVERY_NAME	"^/foglamp/notification/([A-Za-z][a-zA-Z0-9_]*)/delivery/([A-Za-z][a-zA-Z0-9_]*)$"
 #define ASSET_NAME_COMPONENT		1
 #define NOTIFICATION_NAME_COMPONENT	1
 #define RULE_NAME_COMPONENT		2
@@ -48,7 +47,9 @@ class NotificationApi
 			ObjGetDeliveryAll,
 			ObjGetNotificationsAll,
 			ObjGetNotificationName,
-			ObjCreateNotification
+			ObjCreateNotification,
+			ObjCreateNotificationRule,
+			ObjCreateNotificationDelivery
 		} NOTIFICATION_OBJECT;
 
 		NotificationApi(const unsigned short port,
@@ -68,6 +69,10 @@ class NotificationApi
 						      shared_ptr<HttpServer::Response> response,
 						      shared_ptr<HttpServer::Request> request);
 		bool		createNotification(const string& notificationName);
+		bool		createNotificationRule(const string& name,
+						       const string& rule);
+		bool		createNotificationDelivery(const string& name,
+							   const string& rule);
 		const std::string&
 				getCallBackURL() const { return m_callBackURL; };
 		void		setCallBackURL();

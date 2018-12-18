@@ -136,3 +136,13 @@ string OverMaxRule::reason() const
 {
 	return "{}";
 }
+
+
+/**
+ * Call the reconfigure method in the plugin
+ *
+ * @param    newConfig		The new configuration for the plugin
+ */
+void OverMaxRule::reconfigure(const string& newConfig)
+{
+}

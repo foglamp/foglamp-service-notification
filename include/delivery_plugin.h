@@ -32,6 +32,7 @@ class DeliveryPlugin : public Plugin
 						const std::string& notificationName,
 						const std::string& triggerReason,
 						const std::string& customText);
+		void				reconfigure(const std::string& newConfig);
 
 	private:
 		PLUGIN_HANDLE		(*pluginInit)(const ConfigCategory* config);
@@ -41,6 +42,8 @@ class DeliveryPlugin : public Plugin
 							    const std::string&,
 							    const std::string&,
 							    const std::string&);
+		void			(*pluginReconfigurePtr)(PLUGIN_HANDLE,
+							        const std::string& newConfig);
 
 	public:
 		// Persist plugin data
