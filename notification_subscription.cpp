@@ -147,8 +147,9 @@ void NotificationSubscription::registerSubscriptions()
 			    !JSONData.HasMember("triggers") ||
 			    !JSONData["triggers"].IsArray())
 			{
-				m_logger->error("Failed to parse %s plugin_triggers JSON data",
-						rulePluginInstance->getName().c_str());
+				m_logger->error("Failed to parse %s plugin_triggers JSON data %s",
+						rulePluginInstance->getName().c_str(),
+						document.c_str());
 				continue;
 			}
 

@@ -19,6 +19,8 @@
 #include <rule_plugin.h>
 #include <delivery_plugin.h>
 #include <string.h>
+#include "plugin_api.h"
+#include <overmax_rule.h>
 
 using namespace std;
 
@@ -199,9 +201,8 @@ NotificationManager::NotificationManager(const std::string& serviceName,
 
 	/**
 	 * Add here all the builtin rules we want to make available:
-	 *
-	 * this->registerBuiltinRule<OverMaxRule>("OverMaxRule");
 	 */
+	 this->registerBuiltinRule<OverMaxRule>("OverMaxRule");
 }
 
 /**
@@ -253,10 +254,10 @@ bool NotificationManager::loadInstances()
 			       instance.getValue("enable").compare("True") == 0;
 		// Get notification type
 		string notification_type;
-		if (instance.itemExists("type") &&
-		    !instance.getValue("type").empty())
+		if (instance.itemExists("notification_type") &&
+		    !instance.getValue("notification_type").empty())
 		{
-			notification_type = instance.getValue("type");
+			notification_type = instance.getValue("notification_type");
 		}
 		else
 		{
@@ -846,24 +847,61 @@ string NotificationDelivery::toJSON()
  *
  * @return	JSON string with all loaded rules
  */
-string NotificationManager::getJSONRules() const
+string NotificationManager::getJSONRules()
 {
-	string ret = "";
-	for (auto it = m_instances.begin();
-		  it != m_instances.end();
+	string ret;
+	PluginManager* plugins = PluginManager::getInstance();
+	list<std::string> pList;
+	plugins->getInstalledPlugins("notificationRule", pList);
+
+	if (!pList.size())
+	{
+		return "{}";
+	}
+
+	bool foundPlugin = false;
+	ret = "[";
+
+	for (auto it = pList.begin();
+		  it != pList.end();
 		  ++it)
 	{
-		if ((it->second)->getRule())
+		PLUGIN_HANDLE pHandle = plugins->findPluginByName(*it);
+		if (pHandle)
 		{
-			// Get rule JSON string
-			ret += (it->second)->getRule()->toJSON();
-
-			if (std::next(it) != m_instances.end())
+			foundPlugin = true;
+			ret += this->getPluginInfo(plugins->getInfo(pHandle));
+			if (std::next(it) != pList.end())
 			{
 				ret += ", ";
 			}
 		}
 	}
+
+	// Add ", " if at least one loaded plugin and one builtin rule
+	if (foundPlugin && m_builtinRules.size())
+	{
+		ret += ", ";
+	}
+	
+	for (auto it = m_builtinRules.begin();
+		  it != m_builtinRules.end();
+		  ++it)
+	{
+		RulePlugin* builtinRule = this->findBuiltinRule((*it).first);
+		if (builtinRule)
+		{
+			ret += this->getPluginInfo(builtinRule->getInfo());
+			if (std::next(it) != m_builtinRules.end())
+			{
+				ret += ", ";
+			}
+		}
+		delete builtinRule;
+	}
+
+	ret += "]";
+
 	return ret;
 }
 
@@ -872,24 +910,37 @@ string NotificationManager::getJSONRules() const
  *
  * @return	JSON string with all loaded delivery objects
  */
-string NotificationManager::getJSONDelivery() const
+string NotificationManager::getJSONDelivery()
 {
-	string ret = "";
-	for (auto it = m_instances.begin();
-		  it != m_instances.end();
+
+	string ret;
+	PluginManager* plugins = PluginManager::getInstance();
+	list<std::string> pList;
+	plugins->getInstalledPlugins("notificationDelivery", pList);
+
+	if (!pList.size())
+	{
+		return "{}";
+	}
+
+	ret = "[";
+	for (auto it = pList.begin();
+		  it != pList.end();
 		  ++it)
 	{
-		if ((it->second)->getDelivery())
+		PLUGIN_HANDLE pHandle = plugins->findPluginByName(*it);
+		if (pHandle)
 		{
-			// Get delivery JSON string
-			ret += (it->second)->getDelivery()->toJSON();
-
-			if (std::next(it) != m_instances.end())
+			ret += this->getPluginInfo(plugins->getInfo(pHandle));
+			if (std::next(it) != pList.end())
 			{
 				ret += ", ";
 			}
 		}
 	}
+
+	ret += "]";
+
 	return ret;
 }
 
@@ -913,7 +964,7 @@ bool NotificationManager::createEmptyInstance(const string& name)
 			 "\"type\": \"string\", \"default\": \"\"}, "
 			 "\"channel\": {\"description\": \"Channel to send alert on\", "
 			 "\"type\": \"string\", \"default\": \"\"}, "
-			 "\"type\": {\"description\": \"Type of notification\", \"type\": "
+			 "\"notification_type\": {\"description\": \"Type of notification\", \"type\": "
 			 "\"enumeration\", \"options\": [ \"one shot\", \"retriggered\", \"toggled\" ], "
 			 "\"default\" : \"one shot\"}, "
 			 "\"enable\": {\"description\" : \"Enabled\", "
@@ -1075,10 +1126,50 @@ bool NotificationManager::createDeliveryCategory(const string& name,
  *
  * NOTE: not yet implemented
  *
+ * @param    name		The notification to reconfigure
  * @param    category		The JSON string with new configuration
  * @return			True on success, false otherwise.
  */
-bool NotificationInstance::reconfigure(const string& category)
+bool NotificationInstance::reconfigure(const string&name,
+					const string& category)
+{
+	return true;
+}
+
+/**
+ * Return JSON string with pluginInfo data
+ *
+ * @param    info	The plugin info C API 
+ * @return		The JSON info string
+ */
+string NotificationManager::getPluginInfo(PLUGIN_INFORMATION* info)
+{
+	string ret;
+	if (!info)
+	{
+		ret = "{}";
+	}
+	else
+	{
+		ret += "{\"name\": \"" + string(info->name) + "\", \"version\": \"" + \
+			string(info->version) + "\", \"type\": \"" + string(info->type) + \
+			"\", \"interface\": \"" + string(info->interface) + \
+			"\", \"config\": " + string(info->config) + "}";
+	}
+	return ret;
+}
+
+/**
+ * Create a notification instance
+ *                                       
+ * NOTE: not yet implemented
+ *      
+ * @param    name		The notification to create
+ * @param    category		The JSON string with configuration
+ * @return			True on success, false otherwise.
+ */
+bool NotificationManager::createInstance(const string& name,
+					 const string& category)
 {
 	return true;
 }
