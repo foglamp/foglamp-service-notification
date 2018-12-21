@@ -44,5 +44,7 @@ class NotificationService : public ServiceHandler
 		NotificationApi*	m_api;
 		ManagementClient* 	m_managerClient;
 		ManagementApi*		m_managementApi;
+		std::map<std::string, bool>
+					m_registerCategories;
 };
 #endif

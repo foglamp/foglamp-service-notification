@@ -193,7 +193,7 @@ bool NotificationService::start(string& coreAddress,
 	catch (std::exception* e)
 	{
 		m_logger->fatal("Notification service got an error while "
-				"setting up configured instances:" + string(e->what()));
+				"setting up configured instances: " + string(e->what()));
 		delete e;
 	}
 	catch (...)
@@ -313,9 +313,14 @@ void NotificationService::configChange(const string& categoryName,
 		instance = notifications->getNotificationInstance(categoryName);
 		if (instance)
 		{
-			instance->reconfigure(category);
-			return;
+			instance->reconfigure(categoryName, category);
 		}
+		else
+		{
+			notifications->createInstance(categoryName, category);
+		}
+		return;
+			
 	}
 	else
 	{
@@ -323,7 +328,7 @@ void NotificationService::configChange(const string& categoryName,
 		if (foundRule != std::string::npos)
 		{
 			instance = notifications->getNotificationInstance(categoryName.substr(4));
-			if (instance)
+			if (instance && instance->getRulePlugin())
 			{
 				instance->getRulePlugin()->reconfigure(category);
 				return;
@@ -333,7 +338,7 @@ void NotificationService::configChange(const string& categoryName,
 		if (foundDelivery != std::string::npos)
 		{
 			instance = notifications->getNotificationInstance(categoryName.substr(8));
-			if (instance)
+			if (instance && instance->getDeliveryPlugin())
 			{
 				instance->getDeliveryPlugin()->reconfigure(category);
 				return;
@@ -355,8 +360,11 @@ void NotificationService::configChange(const string& categoryName,
 void NotificationService::registerCategory(const string& categoryName)
 {
 	ConfigHandler* configHandler = ConfigHandler::getInstance(m_managerClient);
-	if (configHandler)
+	// Call registerCategory only once
+	if (configHandler &&
+	    m_registerCategories.find(categoryName) == m_registerCategories.end())
 	{
 		configHandler->registerCategory(this, categoryName);
+		m_registerCategories[categoryName] = true;
 	}
 }

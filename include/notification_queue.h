@@ -44,7 +44,7 @@ class NotificationDataElement
 class NotificationQueueElement
 {
 	public:
-		NotificationQueueElement(const string& assetName,
+		NotificationQueueElement(const std::string& assetName,
 					 ReadingSet* data);
 
 		~NotificationQueueElement();
@@ -84,11 +84,11 @@ class NotificationQueue
 		bool			feedDataBuffer(const std::string& ruleName,
 						       const std::string& assetName,
 						       ReadingSet* assetData);
-		bool			processDataBuffer(map<std::string, std::string>&,
-							  const string&ruleName,
-							  const string& assetName,
+		bool			processDataBuffer(std::map<std::string, std::string>&,
+							  const std::string&ruleName,
+							  const std::string& assetName,
 							  NotificationDetail& element);
-		vector<NotificationDataElement*>&
+		std::vector<NotificationDataElement*>&
 					getBufferData(const std::string& ruleName,
 						      const std::string& assetName);
 		void			clearBufferData(const std::string& ruleName,
@@ -97,27 +97,28 @@ class NotificationQueue
 						       const std::string& assetName,
 						       unsigned long num);
 		bool			processAllReadings(NotificationDetail& info,
-							   vector<NotificationDataElement *>& readingsData,
-							   map<std::string, std::string>& results);
-		bool			evalRule(map<std::string, std::string>& results,
+							   std::vector<NotificationDataElement *>& readingsData,
+							   std::map<std::string, std::string>& results);
+		bool			evalRule(std::map<std::string, std::string>& results,
 						 NotificationRule* rule);
-		string			processLastBuffer(NotificationDataElement* data);
-		bool			sendNotification(map<string,string>& results,
+		std::string		processLastBuffer(NotificationDataElement* data);
+		bool			sendNotification(std::map<std::string, std::string>& results,
 							 SubscriptionElement& subscription);
-		map<string, string>	processAllBuffers(vector<NotificationDataElement *>& readingsData,
+		std::map<std::string, std::string>
+					processAllBuffers(std::vector<NotificationDataElement *>& readingsData,
 							  EvaluationType::EVAL_TYPE type,
 							  unsigned long timeInterval);
-		void			setValue(map<string, Datapoint *>& result,
+		void			setValue(std::map<std::string, Datapoint *>& result,
 						 Datapoint* d,
 						 EvaluationType::EVAL_TYPE type);
-		void			setMinValue(map<string, Datapoint *>& result,
-						    const string& key,
+		void			setMinValue(std::map<std::string, Datapoint *>& result,
+						    const std::string& key,
 						    DatapointValue& val);
-		void			setMaxValue(map<string, Datapoint *>& result,
-						    const string& key,
+		void			setMaxValue(std::map<std::string, Datapoint *>& result,
+						    const std::string& key,
 						    DatapointValue& val);
-		void			setSumValues(map<string, Datapoint *>& result,
-						    const string& key,
+		void			setSumValues(std::map<std::string, Datapoint *>& result,
+						    const std::string& key,
 						    DatapointValue& val);
 
 	private:
@@ -138,14 +139,14 @@ class NotificationQueue
 					m_assetData[assetName].push_back(data);
 				};
 				// Return m_assetData[assetName] data
-				vector<NotificationDataElement*>&
+				std::vector<NotificationDataElement*>&
 					getData(const std::string& assetName)
 				{
 					return m_assetData[assetName];
 				};
 
 			private:
-				map<std::string, vector<NotificationDataElement*>>
+				std::map<std::string, std::vector<NotificationDataElement*>>
 					m_assetData;
 		};
 
@@ -153,14 +154,14 @@ class NotificationQueue
 		static NotificationQueue*
 					m_instance;
 		bool			m_running;
-		thread*			m_queue_thread;
+		std::thread*		m_queue_thread;
 		std::mutex		m_qMutex;
 		std::condition_variable	m_processCv;
 		// Queue for received notifications
-		queue<NotificationQueueElement *>
+		std::queue<NotificationQueueElement *>
                                         m_queue;
 		// Per rule priocess buffers
-		map<std::string, NotificationDataBuffer>
+		std::map<std::string, NotificationDataBuffer>
 					m_ruleBuffers;
 		Logger*                 m_logger;
 };
