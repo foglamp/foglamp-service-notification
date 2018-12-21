@@ -13,6 +13,7 @@
 #include <plugin_manager.h>
 #include <config_category.h>
 #include <rule_plugin.h>
+#include <builtin_rule.h>
 
 class OverMaxRule : public RulePlugin
 {
@@ -29,6 +30,12 @@ class OverMaxRule : public RulePlugin
 		PLUGIN_INFORMATION*	getInfo();
 		bool			isBuiltin() const { return true; };
 		void			reconfigure(const std::string& newConfig);
+		bool			evalAsset(const Value& assetValue,
+						  RuleTrigger* rule);
+		bool			checkLongLimit(const Value& point,
+						       long limitValue);
+		bool			checkDoubleLimit(const Value& point,
+							 double limitValue);
 };
 
 #endif
