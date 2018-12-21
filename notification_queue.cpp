@@ -7,7 +7,6 @@
  *
  * Author: Massimiliano Pinto
  */
-#include <notification_service.h>
 #include <management_api.h>
 #include <management_client.h>
 #include <service_record.h>
@@ -17,8 +16,12 @@
 #include <logger.h>
 #include <iostream>
 #include <string>
-#include <notification_queue.h>
 #include <datapoint.h>
+#include <notification_service.h>
+#include <notification_manager.h>
+#include <notification_api.h>
+#include <notification_subscription.h>
+#include <notification_queue.h>
 
 using namespace std;
 
@@ -322,9 +325,15 @@ bool NotificationQueue::feedDataBuffer(const std::string& ruleName,
 				       const std::string& assetName,
 				       ReadingSet* assetData)
 {
-	// Create a ReadingSet copy
+	vector<Reading *> readings = assetData->getAllReadings();
+	vector<Reading *> newReadings;
+	// Create a ReadingSet deep copy
+	for (auto it = readings.cbegin(); it != readings.cend(); it++)
+	{
+		newReadings.push_back(new Reading(**it));
+	}
 	ReadingSet* readingsCopy = new ReadingSet;
-	readingsCopy->append(assetData);
+	readingsCopy->append(newReadings);
 
 	NotificationDataElement* newdata = new NotificationDataElement(ruleName,
 								       assetName,
@@ -969,7 +978,7 @@ NotificationQueue::processAllBuffers(vector<NotificationDataElement *>& readings
 		  ++m)
 		{
 			// Remove data
-			delete result[(*m).first];
+			delete (*m).second;
 		}
 	}
 
@@ -990,12 +999,12 @@ void NotificationQueue::setValue(map<string, Datapoint *>& result,
 {
 	string key = d->getName();
 	// Create a new datapoint value object
-	DatapointValue* val = new DatapointValue(d->getData());
+	DatapointValue val(d->getData());
 
 	if (result.find(key) == result.end())
 	{
 		// Create a new datapoint object
-		result[key] = new Datapoint(key, *val);
+		result[key] = new Datapoint(key, val);
 	}
 	else
 	{
@@ -1003,13 +1012,13 @@ void NotificationQueue::setValue(map<string, Datapoint *>& result,
 		switch(type)
 		{
 			case EvaluationType::Minimum:
-				setMinValue(result, key, *val);
+				setMinValue(result, key, val);
 				break;
 			case EvaluationType::Maximum:
-				setMaxValue(result, key, *val);
+				setMaxValue(result, key, val);
 				break;
 			case EvaluationType::Average:
-				setSumValues(result, key, *val);
+				setSumValues(result, key, val);
 				break;
 			default:
 				break;
