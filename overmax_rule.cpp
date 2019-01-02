@@ -20,41 +20,60 @@
 			"\"description\": { " \
 				"\"description\": \"Generate a notification if the value " \
 					"of a configured datapoint within an asset name " \
-					"exceeds a configured maximum value.\", \
+					"exceeds a configured value.\", \
 				"\"type\": \"string\", " \
 				"\"default\": \"Generate a notification if the value
 					"of a configured datapoint within an asset name " \
-					"exceeds a configured maximum value.\", \
+					"exceeds a configured value.\", \
+				"\"displayName\" : \"Generate a notification if the value " \
+					"of a configured datapoint within an asset name " \
+					"exceeds a configured value.\", " \
 				"\"order\": \"1\" }, " \
 			"\"asset\" : { " \
 				"\"description\": \"The asset name for which " \
 					"notifications will be generated.\", " \
 				"\"type\": \"string\", " \
-				"\"default\": \"\", \"order\": \"2\" }, " \
+				"\"default\": \"\", " \
+				"\"displayName\" : \"The asset name for which notifications will be generated.\", " \
+				"order\": \"2\" }, " \
 			"\"datapoint\" : { " \
 				"\"description\": \"The datapoint within the asset name " \
 					"for which notifications will be generated.\", " \
 				"\"type\": \"string\", " \
-				"\"default\": \"\", \"order\": \"3\" }, " \
+				"\"default\": \"\", " \
+				"\"displayName\" : \"The datapoint within the asset name " \
+					"for which notifications will be generated.\", " \
+				\"order\": \"3\" }, " \
 			"\"evaluation_type\": {" \
 				"\"description\": \"The rule evaluation type\", " \
 				"\"type\": \"enumeration\", " \
 					"\"options\": [ " \
 					"\"window\", \"maximum\", \"minimum\", \"average\", \"latest\" ], " \
-				"\"default\" : \"latest\", \"order\": \"4\" }, "  \
-			"\"time_interval\" : { " \
-				"\"description\": \"The time interval, in seconds, for all evaluation types " \
-					"except 'latest'\", " \
+				"\"default\" : \"latest\", " \
+				"\"displayName\" : \"The rule evaluation type\", \"order\": \"4\" }, "  \
+			"\"time_windowl\" : { " \
+				"\"description\": \"Duration of the time window, in seconds, " \
+					"for collecting data points except for 'latest' evaluation.\", " \
 				"\"type\": \"integer\" , " \
-				"\"default\": \"" DEFAULT_TIME_INTERVAL "\", \"order\": \"5\" }, " \
+				"\"default\": \"" DEFAULT_TIME_INTERVAL "\", " \
+				"\"displayName\" : \"Duration of the time window, in seconds, " \
+					"for collecting data points except for 'latest' evaluation.\", " \
+				\"order\": \"5\" }, " \
 			"\"trigger_value\" : { " \
 				"\"description\": \"Value at which to trigger a notification.\", " \
 				"\"type\": \"float\" , " \
 				"\"default\": \"0.0\", " \
+				"\"displayName\" : \"Value at which to trigger a notification.\", " \
 				"\"order\": \"6\" }"
 
-#define BUITIN_RULE_DESC "\"plugin\": {\"description\": \"The " RULE_NAME " builtin notification rule.\", " \
-			"\"type\": \"string\", \"default\": \"" RULE_NAME "\", \"readonly\": \"true\"}"
+#define BUITIN_RULE_DESC "\"plugin\": {\"description\": \"The " RULE_NAME " notification rule plugin " \
+					"triggers a notification when reading data exceed an absolute limit value.\", " \
+				"\"type\": \"string\", \"default\": \"The " RULE_NAME " notification rule plugin " \
+				"triggers a notification when reading data exceed an absolute limit value.\", " \
+				"\"order\": \"7\", " \
+				"\"displayName\" : \"The " RULE_NAME " notification rule plugin " \
+					"triggers a notification when reading data exceed an absolute limit value.\", " \
+				"\"readonly\": \"true\"}"
 
 #define RULE_DEFAULT_CONFIG_INFO "{" BUITIN_RULE_DESC ", " RULE_DEFAULT_CONFIG "}"
 
@@ -119,7 +138,7 @@ PLUGIN_HANDLE OverMaxRule::init(const ConfigCategory& config)
 	{
 		// evaluation_type can be empty, it means latest value
 		string evaluation_type;
-		// time_interval might be not present only
+		// time_window might be not present only
 		// if evaluation_type is empty
 		unsigned int timeInterval = atoi(DEFAULT_TIME_INTERVAL);
 
@@ -133,9 +152,9 @@ PLUGIN_HANDLE OverMaxRule::init(const ConfigCategory& config)
 			}
 			else
 			{
-				if (config.itemExists("time_interval"))
+				if (config.itemExists("time_window"))
 				{
-					timeInterval = atoi(config.getValue("time_interval").c_str());
+					timeInterval = atoi(config.getValue("time_window").c_str());
 				}
 			}
 		}
