@@ -18,35 +18,42 @@
  */
 #define RULE_DEFAULT_CONFIG \
 			"\"description\": { " \
-				"\"description\": \"Builtin " RULE_NAME " notification rule\", " \
+				"\"description\": \"Generate a notification if the value " \
+					"of a configured datapoint within an asset name " \
+					"exceeds a configured maximum value.\", \
 				"\"type\": \"string\", " \
-				"\"default\": \"The value of a reading data exceeds an absolute limit value\", " \
+				"\"default\": \"Generate a notification if the value
+					"of a configured datapoint within an asset name " \
+					"exceeds a configured maximum value.\", \
 				"\"order\": \"1\" }, " \
 			"\"asset\" : { " \
-				"\"description\": \"The asset name receiving notifications\", " \
+				"\"description\": \"The asset name for which " \
+					"notifications will be generated.\", " \
 				"\"type\": \"string\", " \
 				"\"default\": \"\", \"order\": \"2\" }, " \
 			"\"datapoint\" : { " \
-				"\"description\": \"The datapoint name in asset data\", " \
+				"\"description\": \"The datapoint within the asset name " \
+					"for which notifications will be generated.\", " \
 				"\"type\": \"string\", " \
 				"\"default\": \"\", \"order\": \"3\" }, " \
 			"\"evaluation_type\": {" \
-				"\"description\": \"Rule evaluation type\", " \
+				"\"description\": \"The rule evaluation type\", " \
 				"\"type\": \"enumeration\", " \
 					"\"options\": [ " \
 					"\"window\", \"maximum\", \"minimum\", \"average\", \"latest\" ], " \
 				"\"default\" : \"latest\", \"order\": \"4\" }, "  \
 			"\"time_interval\" : { " \
-				"\"description\": \"The time interval, in seconds, for evaluation_type, except 'latest'\", " \
+				"\"description\": \"The time interval, in seconds, for all evaluation types " \
+					"except 'latest'\", " \
 				"\"type\": \"integer\" , " \
 				"\"default\": \"" DEFAULT_TIME_INTERVAL "\", \"order\": \"5\" }, " \
-			"\"max_allowed_value\" : { " \
-				"\"description\": \"The datapoint max allowed value\", " \
-				"\"type\": \"integer\" , " \
-				"\"default\": \"0\", " \
+			"\"trigger_value\" : { " \
+				"\"description\": \"Value at which to trigger a notification.\", " \
+				"\"type\": \"float\" , " \
+				"\"default\": \"0.0\", " \
 				"\"order\": \"6\" }"
 
-#define BUITIN_RULE_DESC "\"plugin\": {\"description\": \"" RULE_NAME " notification rule\", " \
+#define BUITIN_RULE_DESC "\"plugin\": {\"description\": \"The " RULE_NAME " builtin notification rule.\", " \
 			"\"type\": \"string\", \"default\": \"" RULE_NAME "\", \"readonly\": \"true\"}"
 
 #define RULE_DEFAULT_CONFIG_INFO "{" BUITIN_RULE_DESC ", " RULE_DEFAULT_CONFIG "}"
@@ -133,10 +140,9 @@ PLUGIN_HANDLE OverMaxRule::init(const ConfigCategory& config)
 			}
 		}
 
-		// max_allowed_value is specific for this rule
-		if (config.itemExists("max_allowed_value"))
+		if (config.itemExists("trigger_value"))
 		{
-			long maxVal = atol(config.getValue("max_allowed_value").c_str());
+			double maxVal = atol(config.getValue("trigger_value").c_str());
 			DatapointValue value(maxVal);
 			Datapoint* point = new Datapoint(dataPointName, value);
 			RuleTrigger* pTrigger = new RuleTrigger(dataPointName, point);
@@ -144,6 +150,12 @@ PLUGIN_HANDLE OverMaxRule::init(const ConfigCategory& config)
 						timeInterval,
 						false);
 			builtinRule->addTrigger(assetName, pTrigger);
+		}
+		else
+		{
+			Logger::getLogger()->error("Builtin rule %s configuration error: "
+						   "required parameter 'trigger_value' not found",
+						   RULE_NAME);
 		}
 	}
 
@@ -208,8 +220,6 @@ string OverMaxRule::triggers() const
 /**
  * Evaluate notification data received
  *
- *  Note: all assets must trigger in order to return TRUE
- *
  * @param    assetValues	JSON string document
  *				with notification data.
  * @return			True if the rule was triggered,
@@ -229,8 +239,6 @@ bool OverMaxRule::eval(const string& assetValues)
 	map<std::string, RuleTrigger *>& triggers = handle->getTriggers();
 
 	// Iterate throgh all configured assets
-	// If we have multiple asset the evaluation result is
-	// TRUE only if all assets checks returned true
 	for (auto t = triggers.begin();
 		  t != triggers.end();
 		  ++t)
@@ -242,7 +250,7 @@ bool OverMaxRule::eval(const string& assetValues)
 		}
 		else
 		{
-			// Get all datapoints fir assetName
+			// Get all datapoints for assetName
 			const Value& assetValue = doc[assetName.c_str()];
 
 			// Set evaluation
@@ -285,59 +293,6 @@ void OverMaxRule::reconfigure(const string& newConfig)
 
 /**
  * Check whether the input datapoint
- * is a NUMBER and its value is greater than configured LONG limit
- *
- * @param    point		Current input datapoint
- * @param    limitValue		The LONG limit value
- * @return			True if limit is hit,
- *				false otherwise
- */
-bool OverMaxRule::checkLongLimit(const Value& point,
-				 long limitValue)
-{
-	bool ret = false;
-
-	// Check config datapoint type
-	if (point.GetType() == kNumberType)
-	{
-		if (point.IsDouble())
-		{       
-			if (point.GetDouble() > limitValue)
-			{       
-				ret = true;
-			}
-		}
-		else
-		{
-  			if (point.IsInt() ||
-			    point.IsUint() ||
-			    point.IsInt64() ||
-			    point.IsUint64())
-			{
-				if (point.IsInt() ||
-				    point.IsUint())
-				{
-					if (point.GetInt() > limitValue)
-					{
-						ret = true;
-					}
-				}
-				else
-				{
-					if (point.GetInt64() > limitValue)
-					{
-						ret = true;
-					}
-				}
-			}
-		}
-	}
-
-	return ret;
-}
-
-/**
- * Check whether the input datapoint
  * is a NUMBER and its value is greater than configured DOUBLE limit
  *
  * @param    point		Current input datapoint
@@ -345,8 +300,8 @@ bool OverMaxRule::checkLongLimit(const Value& point,
  * @return			True if limit is hit,
  *				false otherwise
  */
-bool OverMaxRule::checkDoubleLimit(const Value& point,
-				   double limitValue)
+bool OverMaxRule::checkLimit(const Value& point,
+			     double limitValue)
 {
 	bool ret = false;
 
@@ -416,28 +371,13 @@ bool OverMaxRule::evalAsset(const Value& assetValue,
 		{
 			const Value& point = assetValue[datapointName.c_str()];
 			// Check configuration datapoint type
-			switch ((*it)->getData().getType())
+			if ((*it)->getData().getType() == DatapointValue::T_FLOAT)
 			{
-			case DatapointValue::T_INTEGER:
-				assetEval = checkLongLimit(point,
-							   (*it)->getData().toInt());
-				break;
-			case DatapointValue::T_FLOAT:
-				assetEval = checkDoubleLimit(point,
-							   (*it)->getData().toInt());
-				break;
-			case DatapointValue::T_STRING:
-			default:
-				break;
-				assetEval = false;
+				assetEval = checkLimit(point, (*it)->getData().toInt());
 			}
-
-			// Check eval all datapoints
-			if (assetEval == true &&
-			    evalAlldatapoints == false)
+			else
 			{
-				// At least one datapoint has been evaluated
-				break;
+				assetEval = false;
 			}
 		}
 		else

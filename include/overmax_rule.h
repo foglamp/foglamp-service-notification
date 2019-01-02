@@ -35,10 +35,8 @@ class OverMaxRule : public RulePlugin
 		void			reconfigure(const std::string& newConfig);
 		bool			evalAsset(const Value& assetValue,
 						  RuleTrigger* rule);
-		bool			checkLongLimit(const Value& point,
-						       long limitValue);
-		bool			checkDoubleLimit(const Value& point,
-							 double limitValue);
+		bool			checkLimit(const Value& point,
+						   double limitValue);
 };
 
 #endif
