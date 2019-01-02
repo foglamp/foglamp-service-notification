@@ -15,6 +15,9 @@
 #include <rule_plugin.h>
 #include <builtin_rule.h>
 
+/**
+ * OverMaxRule, derived from RulePlugin, is a builtin rule object
+ */
 class OverMaxRule : public RulePlugin
 {
 	public:

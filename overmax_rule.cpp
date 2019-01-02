@@ -11,6 +11,7 @@
 #include <overmax_rule.h>
 
 #define RULE_NAME "OverMaxRule"
+#define DEFAULT_TIME_INTERVAL "30"
 
 /**
  * Rule specific default configuration
@@ -21,26 +22,29 @@
 				"\"type\": \"string\", " \
 				"\"default\": \"The value of a reading data exceeds an absolute limit value\", " \
 				"\"order\": \"1\" }, " \
-			"\"rule_config\": { " \
-				"\"description\": \"Builtin " RULE_NAME " configuration\", " \
-				"\"type\": \"JSON\", " \
-				"\"default\": \"{\\\"rules\\\" : [" \
-							"{ \\\"asset\\\" : {" \
-								"\\\"description\\\" : \\\"The asset name receiving notifications\\\", " \
-								"\\\"name\\\" : \\\"\\\" }, " \
-							   "\\\"evaluation_type\\\": {" \
-								"\\\"description\\\": \\\"Rule evaluation type\\\", " \
-								"\\\"type\\\": \\\"enumeration\\\", " \
-									"\\\"options\\\": [ " \
-										"\\\"window\\\", \\\"maximum\\\", " \
-										"\\\"minimum\\\", \\\"average\\\" " \
-									"], \\\"value\\\": \\\"\\\" }, " \
-							   "\\\"eval_all_datapoints\\\" : true, " \
-							   "\\\"datapoints\\\": [ {\\\"name\\\": \\\"\\\", " \
-									"\\\"type\\\": \\\"integer\\\", " \
-									"\\\"max_allowed_value\\\": 0} ] } ] }\", " \
-				"\"displayName\" : \"" RULE_NAME " configuration\", " \
-				"\"order\": \"2\" }"
+			"\"asset\" : { " \
+				"\"description\": \"The asset name receiving notifications\", " \
+				"\"type\": \"string\", " \
+				"\"default\": \"\", \"order\": \"2\" }, " \
+			"\"datapoint\" : { " \
+				"\"description\": \"The datapoint name in asset data\", " \
+				"\"type\": \"string\", " \
+				"\"default\": \"\", \"order\": \"3\" }, " \
+			"\"evaluation_type\": {" \
+				"\"description\": \"Rule evaluation type\", " \
+				"\"type\": \"enumeration\", " \
+					"\"options\": [ " \
+					"\"window\", \"maximum\", \"minimum\", \"average\", \"latest\" ], " \
+				"\"default\" : \"latest\", \"order\": \"4\" }, "  \
+			"\"time_interval\" : { " \
+				"\"description\": \"The time interval, in seconds, for evaluation_type, except 'latest'\", " \
+				"\"type\": \"integer\" , " \
+				"\"default\": \"" DEFAULT_TIME_INTERVAL "\", \"order\": \"5\" }, " \
+			"\"max_allowed_value\" : { " \
+				"\"description\": \"The datapoint max allowed value\", " \
+				"\"type\": \"integer\" , " \
+				"\"default\": \"0\", " \
+				"\"order\": \"6\" }"
 
 #define BUITIN_RULE_DESC "\"plugin\": {\"description\": \"" RULE_NAME " notification rule\", " \
 			"\"type\": \"string\", \"default\": \"" RULE_NAME "\", \"readonly\": \"true\"}"
@@ -100,101 +104,46 @@ PLUGIN_HANDLE OverMaxRule::init(const ConfigCategory& config)
 
 	BuiltinRule* builtinRule = new BuiltinRule();
 
-	string JSONrules = config.getValue("rule_config");
+	string assetName = config.getValue("asset");
+	string dataPointName = config.getValue("datapoint");
 
-	Document doc;
-	doc.Parse(JSONrules.c_str());
-
-	if (!doc.HasParseError())
+	if (!assetName.empty() &&
+	    !dataPointName.empty())
 	{
-		if (doc.HasMember("rules"))
+		// evaluation_type can be empty, it means latest value
+		string evaluation_type;
+		// time_interval might be not present only
+		// if evaluation_type is empty
+		unsigned int timeInterval = atoi(DEFAULT_TIME_INTERVAL);
+
+		if (config.itemExists("evaluation_type"))
 		{
-			// Gwt defined rules
-			const Value& rules = doc["rules"];
-			if (rules.IsArray())
+			evaluation_type = config.getValue("evaluation_type");
+			if (evaluation_type.compare("latest") == 0)
 			{
-				/**
-				 * For each rule fetch:
-				 * asset: name,
-				 * evaluation_type: value
-				 * time_interval
-				 * datapoints array with max_allowed_value
-				 * eval_all_datapoins: check all datapoint values
-				 * or just eval the rule for at least one datapoint
-				 */
-				for (auto& rule : rules.GetArray())
+				evaluation_type.clear();
+				timeInterval = 0;
+			}
+			else
+			{
+				if (config.itemExists("time_interval"))
 				{
-					if (!rule.HasMember("asset") && !rule.HasMember("datapoints"))
-					{
-						continue;
-					}
-
-					const Value& asset = rule["asset"];
-					string assetName = asset["name"].GetString();
-					if (assetName.empty())
-					{
-						continue;
-					}
-					// evaluation_type can be empty, it means latest value
-					string evaluation_type;
-					// time_interval might be not present only
-					// if evaluation_type is empty
-					unsigned int timeInterval = 0;
-					if (rule.HasMember("evaluation_type"))
-					{
-						const Value& type = rule["evaluation_type"];
-						evaluation_type = type["value"].GetString();
-						if (!evaluation_type.empty() &&
-						    rule.HasMember("time_interval"))
-						{
-							const Value& interval = rule["time_interval"];
-							timeInterval = interval.GetInt();
-						}
-						else
-						{
-							// Log message
-						}
-					}
-
-					const Value& datapoints = rule["datapoints"];
-					bool evalAlldatapoints = true;
-					bool foundDatapoints = false;
-					if (rule.HasMember("eval_all_datapoints") &&
-					    rule["eval_all_datapoints"].IsBool())
-					{
-						evalAlldatapoints = rule["eval_all_datapoints"].GetBool();
-					}
-
-					if (datapoints.IsArray())
-					{
-						for (auto& d : datapoints.GetArray())
-						{
-							if (d.HasMember("name"))
-							{
-								foundDatapoints = true;
-
-								string dataPointName = d["name"].GetString();
-								// max_allowed_value is specific for this rule
-								if (d.HasMember("max_allowed_value") &&
-								    d["max_allowed_value"].IsInt())
-								{
-									DatapointValue value((long)d["max_allowed_value"].GetInt());
-									Datapoint* point = new Datapoint(dataPointName, value);
-									RuleTrigger* pTrigger = new RuleTrigger(dataPointName, point);
-									pTrigger->addEvaluation(evaluation_type,
-												timeInterval,
-												evalAlldatapoints);
-									builtinRule->addTrigger(assetName, pTrigger);
-								}
-							}
-						}
-					}
-					if (!foundDatapoints)
-					{
-						// Log message
-					}
+					timeInterval = atoi(config.getValue("time_interval").c_str());
 				}
 			}
+		}
+
+		// max_allowed_value is specific for this rule
+		if (config.itemExists("max_allowed_value"))
+		{
+			long maxVal = atol(config.getValue("max_allowed_value").c_str());
+			DatapointValue value(maxVal);
+			Datapoint* point = new Datapoint(dataPointName, value);
+			RuleTrigger* pTrigger = new RuleTrigger(dataPointName, point);
+			pTrigger->addEvaluation(evaluation_type,
+						timeInterval,
+						false);
+			builtinRule->addTrigger(assetName, pTrigger);
 		}
 	}
 
