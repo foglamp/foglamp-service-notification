@@ -127,58 +127,11 @@ PLUGIN_INFORMATION* OverMaxRule::getInfo()
  */
 PLUGIN_HANDLE OverMaxRule::init(const ConfigCategory& config)
 {
-
 	BuiltinRule* builtinRule = new BuiltinRule();
-
-	string assetName = config.getValue("asset");
-	string dataPointName = config.getValue("datapoint");
-
-	if (!assetName.empty() &&
-	    !dataPointName.empty())
-	{
-		// evaluation_type can be empty, it means latest value
-		string evaluation_type;
-		// time_window might be not present only
-		// if evaluation_type is empty
-		unsigned int timeInterval = atoi(DEFAULT_TIME_INTERVAL);
-
-		if (config.itemExists("evaluation_type"))
-		{
-			evaluation_type = config.getValue("evaluation_type");
-			if (evaluation_type.compare("latest") == 0)
-			{
-				evaluation_type.clear();
-				timeInterval = 0;
-			}
-			else
-			{
-				if (config.itemExists("time_window"))
-				{
-					timeInterval = atoi(config.getValue("time_window").c_str());
-				}
-			}
-		}
-
-		if (config.itemExists("trigger_value"))
-		{
-			double maxVal = atol(config.getValue("trigger_value").c_str());
-			DatapointValue value(maxVal);
-			Datapoint* point = new Datapoint(dataPointName, value);
-			RuleTrigger* pTrigger = new RuleTrigger(dataPointName, point);
-			pTrigger->addEvaluation(evaluation_type,
-						timeInterval,
-						false);
-			builtinRule->addTrigger(assetName, pTrigger);
-		}
-		else
-		{
-			Logger::getLogger()->error("Builtin rule %s configuration error: "
-						   "required parameter 'trigger_value' not found",
-						   RULE_NAME);
-		}
-	}
-
 	m_instance = (PLUGIN_HANDLE)builtinRule;
+
+	// Configure plugin
+	this->configure(config);
 
 	return (m_instance ? &m_instance : NULL);
 }
@@ -198,10 +151,13 @@ void OverMaxRule::shutdown()
  *
  * @return	JSON string
  */
-string OverMaxRule::triggers() const
+string OverMaxRule::triggers()
 {
 	string ret;
 	BuiltinRule* handle = (BuiltinRule *)m_instance;
+	// Configuration fetch is protected by a lock
+	lock_guard<mutex> guard(m_configMutex);
+
 	if (!handle->hasTriggers())
 	{
 		ret = "{\"triggers\" : []}";
@@ -255,6 +211,9 @@ bool OverMaxRule::eval(const string& assetValues)
 
 	bool eval = false; 
 	BuiltinRule* handle = (BuiltinRule *)m_instance;
+	// Configuration fetch is protected by a lock
+	lock_guard<mutex> guard(m_configMutex);
+
 	map<std::string, RuleTrigger *>& triggers = handle->getTriggers();
 
 	// Iterate throgh all configured assets
@@ -302,12 +261,12 @@ string OverMaxRule::reason() const
 /**
  * Call the reconfigure method in the plugin
  *
- * Not implemented yet
- *
  * @param    newConfig		The new configuration for the plugin
  */
 void OverMaxRule::reconfigure(const string& newConfig)
 {
+	ConfigCategory  config("overmax", newConfig);
+	this->configure(config);
 }
 
 /**
@@ -407,4 +366,65 @@ bool OverMaxRule::evalAsset(const Value& assetValue,
 
 	// Return evaluation for current asset
 	return assetEval;
+}
+
+/**
+ * Configure the builtin rule plugin
+ *
+ * @param    config	The configuration object to process
+ */
+void OverMaxRule::configure(const ConfigCategory& config)
+{
+	BuiltinRule* handle = (BuiltinRule *)m_instance;
+	string assetName = config.getValue("asset");
+	string dataPointName = config.getValue("datapoint");
+
+	if (!assetName.empty() &&
+	    !dataPointName.empty())
+	{
+		// evaluation_type can be empty, it means latest value
+		string evaluation_type;
+		// time_window might be not present only
+		// if evaluation_type is empty
+		unsigned int timeInterval = atoi(DEFAULT_TIME_INTERVAL);
+
+		if (config.itemExists("evaluation_type"))
+		{
+			evaluation_type = config.getValue("evaluation_type");
+			if (evaluation_type.compare("latest") == 0)
+			{
+				evaluation_type.clear();
+				timeInterval = 0;
+			}
+			else
+			{
+				if (config.itemExists("time_window"))
+				{
+					timeInterval = atoi(config.getValue("time_window").c_str());
+				}
+			}
+		}
+
+		if (config.itemExists("trigger_value"))
+		{
+			double maxVal = atol(config.getValue("trigger_value").c_str());
+			DatapointValue value(maxVal);
+			Datapoint* point = new Datapoint(dataPointName, value);
+			RuleTrigger* pTrigger = new RuleTrigger(dataPointName, point);
+			pTrigger->addEvaluation(evaluation_type,
+						timeInterval,
+						false);
+
+			// Configuration change is protected by a lock
+			lock_guard<mutex> guard(m_configMutex);
+
+			handle->addTrigger(assetName, pTrigger);
+		}
+		else
+		{
+			Logger::getLogger()->error("Builtin rule %s configuration error: "
+						   "required parameter 'trigger_value' not found",
+						   RULE_NAME);
+		}
+	}
 }

@@ -87,7 +87,7 @@ void RulePlugin::shutdown()
  * @return		The JSON document, as string
  *			that describes the rule triggers.
  */
-string RulePlugin::triggers() const
+string RulePlugin::triggers()
 {
 	string ret = "";
 	if (this->pluginTriggersPtr)

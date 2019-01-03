@@ -52,6 +52,7 @@ class DeliveryPlugin : public Plugin
 	private:
 		std::string     	m_name;
 		PLUGIN_HANDLE   	m_instance;
+		std::mutex		m_configMutex;
 };
 
 #endif
