@@ -20,11 +20,11 @@
 			"\"description\": { " \
 				"\"description\": \"Generate a notification if the value " \
 					"of a configured datapoint within an asset name " \
-					"exceeds a configured value.\", \
+					"exceeds a configured value.\", " \
 				"\"type\": \"string\", " \
-				"\"default\": \"Generate a notification if the value
+				"\"default\": \"Generate a notification if the value " \
 					"of a configured datapoint within an asset name " \
-					"exceeds a configured value.\", \
+					"exceeds a configured value.\", " \
 				"\"displayName\" : \"Generate a notification if the value " \
 					"of a configured datapoint within an asset name " \
 					"exceeds a configured value.\", " \
@@ -35,7 +35,7 @@
 				"\"type\": \"string\", " \
 				"\"default\": \"\", " \
 				"\"displayName\" : \"The asset name for which notifications will be generated.\", " \
-				"order\": \"2\" }, " \
+				"\"order\": \"2\" }, " \
 			"\"datapoint\" : { " \
 				"\"description\": \"The datapoint within the asset name " \
 					"for which notifications will be generated.\", " \
@@ -43,22 +43,22 @@
 				"\"default\": \"\", " \
 				"\"displayName\" : \"The datapoint within the asset name " \
 					"for which notifications will be generated.\", " \
-				\"order\": \"3\" }, " \
+				"\"order\": \"3\" }, " \
 			"\"evaluation_type\": {" \
 				"\"description\": \"The rule evaluation type\", " \
 				"\"type\": \"enumeration\", " \
 					"\"options\": [ " \
 					"\"window\", \"maximum\", \"minimum\", \"average\", \"latest\" ], " \
 				"\"default\" : \"latest\", " \
-				"\"displayName\" : \"The rule evaluation type\", \"order\": \"4\" }, "  \
-			"\"time_windowl\" : { " \
+				"\"displayName\" : \"The rule evaluation type.\", \"order\": \"4\" }, " \
+			"\"time_window\" : { " \
 				"\"description\": \"Duration of the time window, in seconds, " \
 					"for collecting data points except for 'latest' evaluation.\", " \
 				"\"type\": \"integer\" , " \
 				"\"default\": \"" DEFAULT_TIME_INTERVAL "\", " \
 				"\"displayName\" : \"Duration of the time window, in seconds, " \
 					"for collecting data points except for 'latest' evaluation.\", " \
-				\"order\": \"5\" }, " \
+				"\"order\": \"5\" }, " \
 			"\"trigger_value\" : { " \
 				"\"description\": \"Value at which to trigger a notification.\", " \
 				"\"type\": \"float\" , " \
@@ -69,7 +69,7 @@
 #define BUITIN_RULE_DESC "\"plugin\": {\"description\": \"The " RULE_NAME " notification rule plugin " \
 					"triggers a notification when reading data exceed an absolute limit value.\", " \
 				"\"type\": \"string\", \"default\": \"The " RULE_NAME " notification rule plugin " \
-				"triggers a notification when reading data exceed an absolute limit value.\", " \
+					"triggers a notification when reading data exceed an absolute limit value.\", " \
 				"\"order\": \"7\", " \
 				"\"displayName\" : \"The " RULE_NAME " notification rule plugin " \
 					"triggers a notification when reading data exceed an absolute limit value.\", " \
