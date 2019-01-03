@@ -31,7 +31,7 @@ class RulePlugin : public Plugin
 		virtual PLUGIN_HANDLE		init(const ConfigCategory& config);
 		virtual void			shutdown();
 		virtual bool			persistData() const { return info->options & SP_PERSIST_DATA; };
-		virtual std::string		triggers() const;
+		virtual std::string		triggers();
 		virtual bool			eval(const std::string& assetValues);
 		virtual std::string		reason() const;
 		virtual bool			isBuiltin() const { return false; };
@@ -54,6 +54,7 @@ class RulePlugin : public Plugin
 
 	protected:
 		PLUGIN_HANDLE   		m_instance;
+		std::mutex			m_configMutex;
 
 	private:
 		std::string     		m_name;
