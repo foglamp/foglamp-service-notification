@@ -1284,8 +1284,8 @@ bool NotificationInstance::updateInstance(const string& name,
 				// 2- Remove assetName in rule object
 				// 3- Remove SubscriptionElement
 				vector<SubscriptionElement> elems = (*it).second;
-				for (auto s = b.begin();
-					  s != b.end(); )
+				for (auto s = elems.begin();
+					  s != elems.end(); )
 				{
 					// Get ruleName 
 					string currentRule = (*s).getRule()->getName();
