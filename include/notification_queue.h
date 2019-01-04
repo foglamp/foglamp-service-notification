@@ -79,7 +79,7 @@ class NotificationQueue
 
 	private:
 		void			processDataSet(NotificationQueueElement* data);
-		void			feedAllDataBuffers(NotificationQueueElement* data);
+		bool			feedAllDataBuffers(NotificationQueueElement* data);
 		void			processAllDataBuffers(const std::string& assetName);
 		bool			feedDataBuffer(const std::string& ruleName,
 						       const std::string& assetName,

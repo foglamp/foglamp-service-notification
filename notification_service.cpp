@@ -181,39 +181,10 @@ bool NotificationService::start(string& coreAddress,
 				    storageInfo.getPort());
 
 	// Setup NotificationManager class
-	bool nLoaded = false;
 	NotificationManager instances(m_name, m_managerClient, this);
-	try
-	{
-		// Get all notification instances under Notifications
-		// and load plugins defined in all notifications 
-		nLoaded = instances.loadInstances();
-		//instancesLoaded = true;
-	}
-	catch (std::exception* e)
-	{
-		m_logger->fatal("Notification service got an error while "
-				"setting up configured instances: " + string(e->what()));
-		delete e;
-	}
-	catch (...)
-	{
-		std::exception_ptr p = std::current_exception();
-		string name = (p ? p.__cxa_exception_type()->name() : "null");
-		m_logger->fatal("Notification service igot an error while "
-				"setting up configured instances: '" + name + "'");
-	}
-
-	// Check we have loaded instances and we can continue
-	if (!nLoaded)
-	{
-		this->cleanupResources();
-
-		// Unregister from FogLAMP
-		m_managerClient->unregisterService();
-
-		return false;
-	}
+	// Get all notification instances under Notifications
+	// and load plugins defined in all notifications 
+	instances.loadInstances();
 
 	// We have notitication instances loaded
 	// (1) Start the NotificationQueue
@@ -236,7 +207,6 @@ bool NotificationService::start(string& coreAddress,
 	// NOTE:
 	// - Notification API listener is already down.
 	// - all subscriptions already unregistered
-	subscriptions.unregisterSubscriptions();
 
 	// Unregister from storage service
 	m_managerClient->unregisterService();
@@ -330,7 +300,23 @@ void NotificationService::configChange(const string& categoryName,
 			instance = notifications->getNotificationInstance(categoryName.substr(4));
 			if (instance && instance->getRulePlugin())
 			{
+				// Call plugin reconfigure
 				instance->getRulePlugin()->reconfigure(category);
+
+				// Get all asset names
+				std::vector<NotificationDetail>& allAssets = instance->getRule()->getAssets();
+
+				// Call "plugin_triggers"
+				string newTriggers = instance->getRulePlugin()->triggers();
+				if (!allAssets.size())
+				{
+					// TODO: instance->addSubscriptions(newTriggers);
+				}
+				else
+				{
+					// TODO: instance->updateSubscriptions(newTriggers);
+				}
+
 				return;
 			}
 		}
@@ -340,6 +326,7 @@ void NotificationService::configChange(const string& categoryName,
 			instance = notifications->getNotificationInstance(categoryName.substr(8));
 			if (instance && instance->getDeliveryPlugin())
 			{
+				// Call plugin reconfigure
 				instance->getDeliveryPlugin()->reconfigure(category);
 				return;
 			}

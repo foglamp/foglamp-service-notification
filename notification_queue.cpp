@@ -150,6 +150,11 @@ void NotificationQueue::stop()
 
 	// Get the subscriptions instance
 	NotificationSubscription* subscriptions = NotificationSubscription::getInstance();
+	// NOTE:
+	//
+	// Notificatiion API server is down: we cannot receive any configuration change
+	// so we don't need to lock subscriptions object
+	//
         // Get all subscriptions for assetName
 	std::map<std::string, std::vector<SubscriptionElement>>& registeredItems = subscriptions->getAllSubscriptions();
 
@@ -280,9 +285,15 @@ void NotificationQueue::processDataSet(NotificationQueueElement* data)
 	 */
 
 	// (1) feed al rule buffers
-	this->feedAllDataBuffers(data);
-	// (2) process all data in all rule buffers for given assetName
-	this->processAllDataBuffers(data->getAssetName());
+	if (this->feedAllDataBuffers(data))
+	{
+		// (2) process all data in all rule buffers for given assetName
+		this->processAllDataBuffers(data->getAssetName());
+	}
+	else
+	{
+		delete data;
+	}
 }
 
 /**
@@ -292,14 +303,18 @@ void NotificationQueue::processDataSet(NotificationQueueElement* data)
  *
  * @param    data	Current item in the queue
  */
-void NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
+bool NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 {
+	bool ret = false;
+
 	// Get assetName in the data element
 	string assetName = data->getAssetName();
 
 	// Get all subscriptions related the asetName
 	NotificationSubscription* subscriptions = NotificationSubscription::getInstance();
+	subscriptions->lockSubscriptions();
 	std::vector<SubscriptionElement>& subscriptionItems = subscriptions->getSubscription(assetName);
+	subscriptions->unlockSubscriptions();
 
 	for (auto it = subscriptionItems.begin();
 		  it != subscriptionItems.end();
@@ -309,8 +324,16 @@ void NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 		string ruleName = (*it).getRule()->getName();
 
 		// Feed buffer[ruleName][theAsset] with Readings data
-		this->feedDataBuffer(ruleName, assetName, data->getAssetData());
+		NotificationInstance* instance = (*it).getInstance();
+		if (instance->isEnabled())
+		{
+			ret = this->feedDataBuffer(ruleName,
+						   assetName,
+						   data->getAssetData());
+		}
 	}
+
+	return ret;
 }
 
 /**
@@ -452,8 +475,8 @@ bool NotificationQueue::processDataBuffer(map<string, string>& results,
 #endif
 
 	// Get all data for assetName in the buffer[ruleName]
-	vector<NotificationDataElement*>& readingsData = this->getBufferData(ruleName,
-									     assetName);
+	vector<NotificationDataElement*>& readingsData =
+		this->getBufferData(ruleName, assetName);
 
 	if (readingsData.size() == 0)
 	{
@@ -531,7 +554,9 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 	// Get the subscriptions instance
 	NotificationSubscription* subscriptions = NotificationSubscription::getInstance();
 	// Get all subscriptions for assetName
+	subscriptions->lockSubscriptions();
 	std::vector<SubscriptionElement>& registeredItems = subscriptions->getSubscription(assetName);
+	subscriptions->unlockSubscriptions();
 
 	// Iterate trough subscriptions
 	for (auto it = registeredItems.begin();
@@ -753,6 +778,7 @@ string NotificationQueue::processLastBuffer(NotificationDataElement* data)
 		}
 		ret += " }";
 
+		// Just keep last buffer
 		this->keepBufferData(data->getRuleName(),
 				     data->getAssetName(),
 				     1);
