@@ -35,8 +35,8 @@ class SubscriptionElement
 		NotificationInstance*	getInstance() { return m_notification; };
 
 	private:
-		const std::string	m_asset;
-		const std::string	m_name;
+		std::string	m_asset;
+		std::string	m_name;
 		NotificationInstance*	m_notification;
 };
 
@@ -67,6 +67,10 @@ class NotificationSubscription
 		};
 		bool 			addSubscription(const std::string& assetName,
 							SubscriptionElement& element);
+		void			unregisterSubscription(const std::string& assetName);
+		bool			createSubscription(NotificationInstance* instance);
+		void			lockSubscriptions() { m_subscriptionMutex.lock(); };
+		void			unlockSubscriptions() { m_subscriptionMutex.unlock(); };
 
 	private:
 		EvaluationType		getEvalType(const Value& value);
@@ -80,6 +84,7 @@ class NotificationSubscription
 		std::map<std::string, std::vector<SubscriptionElement>>
 					m_subscriptions;
 		Logger*			m_logger;
+		std::mutex		m_subscriptionMutex;
 };
 
 #endif

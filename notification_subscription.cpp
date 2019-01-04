@@ -81,8 +81,10 @@ void NotificationSubscription::unregisterSubscriptions()
 	string callBackURL = api->getCallBackURL();
 
 	// Get all NotificationSubscriptions
+	m_subscriptionMutex.lock();
 	std:map<std::string,
 		std::vector<SubscriptionElement>>& subscriptions = this->getAllSubscriptions();
+	m_subscriptionMutex.unlock();
 
 	for (auto it = subscriptions.begin();
 		  it != subscriptions.end();
@@ -109,6 +111,7 @@ void NotificationSubscription::registerSubscriptions()
 	// Get NotificationManager instance
 	NotificationManager* manager = NotificationManager::getInstance();
 	// Get all Notification instances
+	manager->lockInstances();
 	std::map<std::string, NotificationInstance *>& instances = manager->getInstances();
 
 	for (auto it = instances.begin();
@@ -131,64 +134,11 @@ void NotificationSubscription::registerSubscriptions()
 			continue;
 		}
 
-		// Get RulePlugin
-		RulePlugin* rulePluginInstance = instance->getRulePlugin();
-		// Get DeliveryPlugin
-		DeliveryPlugin* deliveryPluginInstance = instance->getDeliveryPlugin();
-
-		if (rulePluginInstance)
-		{
-			// Call "plugin_triggers"
-			string document = rulePluginInstance->triggers();
-
-			Document JSONData;
-			JSONData.Parse(document.c_str());
-			if (JSONData.HasParseError() ||
-			    !JSONData.HasMember("triggers") ||
-			    !JSONData["triggers"].IsArray())
-			{
-				m_logger->error("Failed to parse %s plugin_triggers JSON data %s",
-						rulePluginInstance->getName().c_str(),
-						document.c_str());
-				continue;
-			}
-
-			const Value& triggers = JSONData["triggers"];
-			if (!triggers.Size())
-			{
-				m_logger->info("No triggers set for %s plugin",
-					       rulePluginInstance->getName().c_str());
-				continue;
-			}
-
-			string ruleName = instance->getRule()->getName();
-			for (Value::ConstValueIterator itr = triggers.Begin();
-						       itr != triggers.End();
-						       ++itr)
-			{
-				// Get asset name
-				string asset = (*itr)["asset"].GetString();
-			 	// Get evaluation type and time period
-				EvaluationType type = this->getEvalType((*itr));
-				// Create NotificationDetail object
-				NotificationDetail assetInfo(asset,
-							     ruleName,
-							     type);
-
-				// Add assetInfo to its rule
-				NotificationRule* theRule = instance->getRule();
-				theRule->addAsset(assetInfo);
- 
-				// Create subscription object
-				SubscriptionElement subscription(asset,
-								 (*it).first,
-								 instance);
-
-				// Add subscription and register asset interest
-				bool ret = this->addSubscription(asset, subscription);
-			}
-		}
+		// Create a new subscription
+		bool ret = this->createSubscription(instance);
 	}
+	// Unlock instances
+	manager->unlockInstances();
 }
 
 /**
@@ -276,4 +226,105 @@ EvaluationType NotificationSubscription::getEvalType(const Value& value)
 	}
 
 	return EvaluationType(evaluation, interval);
+}
+/**
+ * Unregister a single subscription from storage layer
+ *
+ * @param    assetName		The asset name to unregister
+ */
+void NotificationSubscription::unregisterSubscription(const string& assetName)
+{
+	// Get NotificationAPI instance
+	NotificationApi* api = NotificationApi::getInstance();
+	// Get callback URL
+	string callBackURL = api->getCallBackURL();
+
+	// Get all NotificationSubscriptions
+	m_subscriptionMutex.lock();
+	std:map<std::string, std::vector<SubscriptionElement>>&
+		subscriptions = this->getAllSubscriptions();
+	m_subscriptionMutex.unlock();
+
+	auto it = subscriptions.find(assetName);
+	if (it != subscriptions.end())
+	{
+		// Unregister interest
+		m_storage.unregisterAssetNotification((*it).first,
+						      callBackURL + assetName);
+
+		m_logger->info("Unregistering asset '" + \
+				assetName + "' for notification " + \
+				this->getNotificationName());
+	}
+}
+
+/**
+ * Create a SubscriptionElement object and register interest for asset names
+ *
+ * @param    instance		The notification instance
+ *				with already set rule and delivery plugins
+ * @return			True on success, false on errors
+ */
+bool NotificationSubscription::createSubscription(NotificationInstance* instance)
+{
+	bool ret = false;
+	// Get RulePlugin
+	RulePlugin* rulePluginInstance = instance->getRulePlugin();
+	// Get DeliveryPlugin
+	DeliveryPlugin* deliveryPluginInstance = instance->getDeliveryPlugin();
+
+	if (rulePluginInstance)
+	{
+		// Call "plugin_triggers"
+		string document = rulePluginInstance->triggers();
+
+		Document JSONData;
+		JSONData.Parse(document.c_str());
+		if (JSONData.HasParseError() ||
+		    !JSONData.HasMember("triggers") ||
+		    !JSONData["triggers"].IsArray())
+		{
+			m_logger->error("Failed to parse %s plugin_triggers JSON data %s",
+					rulePluginInstance->getName().c_str(),
+					document.c_str());
+			return false;
+		}
+
+		const Value& triggers = JSONData["triggers"];
+		if (!triggers.Size())
+		{
+			m_logger->info("No triggers set for %s plugin",
+				       rulePluginInstance->getName().c_str());
+			return false;
+		}
+
+		string ruleName = instance->getRule()->getName();
+		for (Value::ConstValueIterator itr = triggers.Begin();
+					       itr != triggers.End();
+					       ++itr)
+		{
+			// Get asset name
+			string asset = (*itr)["asset"].GetString();
+		 	// Get evaluation type and time period
+			EvaluationType type = this->getEvalType((*itr));
+			// Create NotificationDetail object
+			NotificationDetail assetInfo(asset,
+						     ruleName,
+						     type);
+
+			// Add assetInfo to its rule
+			NotificationRule* theRule = instance->getRule();
+			theRule->addAsset(assetInfo);
+ 
+			// Create subscription object
+			SubscriptionElement subscription(asset,
+							 instance->getName(),
+							 instance);
+
+			// Add subscription and register asset interest
+			lock_guard<mutex> guard(m_subscriptionMutex);
+			ret = this->addSubscription(asset, subscription);
+		}
+	}
+	return ret;
 }
