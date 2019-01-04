@@ -24,29 +24,27 @@ using namespace std;
 RulePlugin::RulePlugin(const std::string& name,
 		       PLUGIN_HANDLE handle) : Plugin(handle), m_name(name)
 {
-	if (handle != NULL)
-	{
-		// Setup the function pointers to the plugin
-		pluginInit = (PLUGIN_HANDLE (*)(const ConfigCategory *))
-						manager->resolveSymbol(handle, "plugin_init");
+	// Setup the function pointers to the plugin
+	pluginInit = (PLUGIN_HANDLE (*)(const ConfigCategory *))
+					manager->resolveSymbol(handle, "plugin_init");
 
-		pluginShutdownPtr = (void (*)(PLUGIN_HANDLE))
-					      manager->resolveSymbol(handle,
+	pluginShutdownPtr = (void (*)(PLUGIN_HANDLE))
+				      manager->resolveSymbol(handle,
 							     "plugin_shutdown");
-		pluginTriggersPtr = (string (*)(PLUGIN_HANDLE))
-						manager->resolveSymbol(handle, "plugin_triggers");
+	pluginTriggersPtr = (string (*)(PLUGIN_HANDLE))
+					manager->resolveSymbol(handle, "plugin_triggers");
 
-		pluginEvalPtr = (bool (*)(PLUGIN_HANDLE,
-					  const string& assetValues))
-					  manager->resolveSymbol(handle, "plugin_eval");
+	pluginEvalPtr = (bool (*)(PLUGIN_HANDLE,
+				  const string& assetValues))
+				  manager->resolveSymbol(handle, "plugin_eval");
 
-		pluginReasonPtr = (string (*)(PLUGIN_HANDLE))
-					      manager->resolveSymbol(handle, "plugin_reason");
+	pluginReasonPtr = (string (*)(PLUGIN_HANDLE))
+				  manager->resolveSymbol(handle, "plugin_reason");
 
-		pluginReconfigurePtr = (void (*)(PLUGIN_HANDLE, const std::string&))
-						 manager->resolveSymbol(handle,
+	pluginReconfigurePtr = (void (*)(PLUGIN_HANDLE, const std::string&))
+					 manager->resolveSymbol(handle,
 								"plugin_reconfigure");
-	}
+
 	// Persist data initialised
 	m_plugin_data = NULL;
 }
