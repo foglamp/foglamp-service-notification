@@ -76,6 +76,8 @@ class NotificationQueue
 		void			process();
 		bool			isRunning() const { return m_running; };
 		void			stop();
+		void			clearBufferData(const std::string& ruleName,
+							const std::string& assetName);
 
 	private:
 		void			processDataSet(NotificationQueueElement* data);
@@ -91,8 +93,6 @@ class NotificationQueue
 		std::vector<NotificationDataElement*>&
 					getBufferData(const std::string& ruleName,
 						      const std::string& assetName);
-		void			clearBufferData(const std::string& ruleName,
-							const std::string& assetName);
 		void 			keepBufferData(const std::string& ruleName,
 						       const std::string& assetName,
 						       unsigned long num);
@@ -164,5 +164,6 @@ class NotificationQueue
 		std::map<std::string, NotificationDataBuffer>
 					m_ruleBuffers;
 		Logger*                 m_logger;
+		std::mutex		m_bufferMutex;
 };
 #endif
