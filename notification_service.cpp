@@ -265,11 +265,13 @@ void NotificationService::cleanupResources()
 
 /**
  * Configuration change notification
+ *
+ * @param    categoryName	The category name which configuration has been changed
+ * @param    category		The JSON string with new configuration
  */
 void NotificationService::configChange(const string& categoryName,
 				       const string& category)
 {
-
 	NotificationManager* notifications = NotificationManager::getInstance();
 	NotificationInstance* instance = NULL;
 
