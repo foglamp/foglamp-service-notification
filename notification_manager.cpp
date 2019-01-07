@@ -1219,6 +1219,10 @@ bool NotificationInstance::updateInstance(const string& name,
 		// Set disable flag
 		this->disable();
 		// Get rule name
+		if (!this->getRule())
+		{
+			return false;
+		}
 		string ruleName = this->getRule()->getName();
 		// Get all assets for this rule
 		std::vector<NotificationDetail>& assets = this->getRule()->getAssets();
