@@ -269,6 +269,7 @@ void NotificationService::cleanupResources()
 void NotificationService::configChange(const string& categoryName,
 				       const string& category)
 {
+
 	NotificationManager* notifications = NotificationManager::getInstance();
 	NotificationInstance* instance = NULL;
 
@@ -280,7 +281,9 @@ void NotificationService::configChange(const string& categoryName,
 	    foundDelivery == std::string::npos)
 	{
 		// It's a notification category
+		notifications->lockInstances();
 		instance = notifications->getNotificationInstance(categoryName);
+		notifications->unlockInstances();
 		if (instance)
 		{
 			instance->reconfigure(categoryName, category);
@@ -297,33 +300,65 @@ void NotificationService::configChange(const string& categoryName,
 		// Check it's a rule category
 		if (foundRule != std::string::npos)
 		{
+			// Get related notification instance object
+			notifications->lockInstances();
 			instance = notifications->getNotificationInstance(categoryName.substr(4));
-			if (instance && instance->getRulePlugin())
+			notifications->unlockInstances();
+			if (!instance ||
+			    !instance->getRulePlugin())
 			{
-				// Call plugin reconfigure
-				instance->getRulePlugin()->reconfigure(category);
-
-				// Get all asset names
-				std::vector<NotificationDetail>& allAssets = instance->getRule()->getAssets();
-
-				// Call "plugin_triggers"
-				string newTriggers = instance->getRulePlugin()->triggers();
-				if (!allAssets.size())
-				{
-					// TODO: instance->addSubscriptions(newTriggers);
-				}
-				else
-				{
-					// TODO: instance->updateSubscriptions(newTriggers);
-				}
-
 				return;
 			}
+			
+			// Call plugin reconfigure
+			instance->getRulePlugin()->reconfigure(category);
+
+			// Instance not enabled, just return
+			if (!instance->isEnabled())
+			{
+				return;
+			}
+
+			// Get instance rule
+			string ruleName = instance->getRule()->getName();
+			// Get all asset names
+			std::vector<NotificationDetail>& allAssets = instance->getRule()->getAssets();
+
+			// Get Notification subscripption inastance
+			NotificationSubscription* subscriptions = NotificationSubscription::getInstance();
+
+			if (!allAssets.size())
+			{
+				// No subscriptions, just create a new one
+				// by calling "plugin_triggers"
+				subscriptions->createSubscription(instance);
+			}
+			else
+			{
+				for (auto a = allAssets.begin();
+					  a != allAssets.end(); )
+				{
+					// Remove assetName/ruleName from subscriptions
+					subscriptions->removeSubscription((*a).getAssetName(),
+									  ruleName);
+					// Remove asseet
+					allAssets.erase(a);
+				}
+
+				// Create a new subscription by calling "plugin_triggers"
+				subscriptions->createSubscription(instance);
+			}
+
+			return;
 		}
+
 		// Check it's a delivery category
 		if (foundDelivery != std::string::npos)
 		{
+			// Get related notification instance
+			notifications->lockInstances();
 			instance = notifications->getNotificationInstance(categoryName.substr(8));
+			notifications->unlockInstances();
 			if (instance && instance->getDeliveryPlugin())
 			{
 				// Call plugin reconfigure
