@@ -1276,30 +1276,51 @@ bool NotificationInstance::updateInstance(const string& name,
 	    rulePluginName.compare(this->getRulePlugin()->getName()) != 0 ||
 	    deliveryPluginName.compare(this->getDeliveryPlugin()->getName()) != 0)
 	{
+		bool retCode = false;
+
 		// Set disable flag
 		this->disable();
 		// Get rule name
-		string ruleName = this->getRule()->getName();
-		// Get all assets for this rule
-		std::vector<NotificationDetail>& assets = this->getRule()->getAssets();
-
-		// Unregister current subscriptions for this rule and
-		// clean all current rule/asset buffers
-		// remove all assets from the rule
-		for (auto a = assets.begin();
-		          a != assets.end(); )
+		if (this->getRule())
 		{
-			subscriptions->removeSubscription((*a).getAssetName(),
-							  ruleName);
-			// Remove asseet
-			assets.erase(a);
+			string ruleName = this->getRule()->getName();
+			// Get all assets for this rule
+			std::vector<NotificationDetail>& assets = this->getRule()->getAssets();
+
+			// Unregister current subscriptions for this rule and
+			// clean all current rule/asset buffers
+			// remove all assets from the rule
+			for (auto a = assets.begin();
+			          a != assets.end(); )
+			{
+				subscriptions->removeSubscription((*a).getAssetName(),
+								  ruleName);
+				// Remove asseet
+				assets.erase(a);
+			}
 		}
 
 		// Remove current instance
 		instances->removeInstance(name);
 
 		// Create a new one with new config
-		return instances->setupInstance(name, newConfig);
+		if (instances->setupInstance(name, newConfig))
+		{
+			// Get new instance
+			// Protect access to m_instances
+			instances->lockInstances();
+			auto i = instances->getInstances().find(name);
+			bool ret = i != instances->getInstances().end();
+			instances->unlockInstances();
+			if (ret)
+			{
+				// Create a new subscription
+				subscriptions->createSubscription((*i).second);
+				retCode = true;
+			}
+		}
+
+		return retCode;
 	}
 
 	/**
@@ -1368,7 +1389,7 @@ bool NotificationManager::parseConfiguration(const ConfigCategory& config,
 	rulePluginName = config.getValue("rule");
 	// The delivery plugin to use
 	deliveryPluginName = config.getValue("channel");
-	// Is enabled?
+	// Is it enabled?
 	enabled = config.getValue("enable").compare("true") == 0 ||
 		  config.getValue("enable").compare("True") == 0;
 
