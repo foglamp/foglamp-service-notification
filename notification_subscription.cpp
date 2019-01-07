@@ -18,6 +18,7 @@
 #include <string>
 #include <notification_subscription.h>
 #include <notification_api.h>
+#include <notification_queue.h>
 #include <rule_plugin.h>
 #include <delivery_plugin.h>
 #include "rapidjson/writer.h"
@@ -82,8 +83,8 @@ void NotificationSubscription::unregisterSubscriptions()
 
 	// Get all NotificationSubscriptions
 	m_subscriptionMutex.lock();
-	std:map<std::string,
-		std::vector<SubscriptionElement>>& subscriptions = this->getAllSubscriptions();
+	std:map<std::string, std::vector<SubscriptionElement>>&
+		subscriptions = this->getAllSubscriptions();
 	m_subscriptionMutex.unlock();
 
 	for (auto it = subscriptions.begin();
@@ -227,6 +228,7 @@ EvaluationType NotificationSubscription::getEvalType(const Value& value)
 
 	return EvaluationType(evaluation, interval);
 }
+
 /**
  * Unregister a single subscription from storage layer
  *
@@ -243,9 +245,9 @@ void NotificationSubscription::unregisterSubscription(const string& assetName)
 	m_subscriptionMutex.lock();
 	std:map<std::string, std::vector<SubscriptionElement>>&
 		subscriptions = this->getAllSubscriptions();
+	auto it = subscriptions.find(assetName);
 	m_subscriptionMutex.unlock();
 
-	auto it = subscriptions.find(assetName);
 	if (it != subscriptions.end())
 	{
 		// Unregister interest
@@ -327,4 +329,70 @@ bool NotificationSubscription::createSubscription(NotificationInstance* instance
 		}
 	}
 	return ret;
+}
+
+/**
+ * Remove a given subscription
+ *
+ * @param    assetName		The register assetName for notifications
+ * @param    ruleName		The associated ruleName
+ */
+void NotificationSubscription::removeSubscription(const string& assetName,
+						  const string& ruleName)
+{
+	this->lockSubscriptions();
+	map<string, vector<SubscriptionElement>>&
+		allSubscriptions = this->getAllSubscriptions();
+	auto it = allSubscriptions.find(assetName);
+	bool ret = it != allSubscriptions.end();
+	this->unlockSubscriptions();
+	// For the found assetName subscriptions
+	// 1- Unsubscribe notification interest for assetNamme
+	// 2- Remove data in buffer[ruleName][assetName]
+	// 3- Remove ruleName object fot assetName
+	// 4- Remove Subscription
+	if (ret)
+	{
+		// Get Notification queue instance
+		vector<SubscriptionElement> elems = (*it).second;
+		if (elems.size() == 1)
+		{
+		        // 1- We have only one subscription for current asset
+		        // call unregister interest
+		        this->unregisterSubscription(assetName);
+		}
+
+		// Get Notification queue instance
+		NotificationQueue* queue =  NotificationQueue::getInstance();
+		// 2- Remove all data in buffer[ruleName][assetName]
+		queue->clearBufferData(ruleName, assetName);
+
+		// 3- Check all subscrioptions rules for given assetName
+		for (auto e = elems.begin();
+			  e != elems.end(); )
+		{
+			// Get notification rule object 
+			if ((*e).getRule())
+			{
+				string currentRule = (*e).getRule()->getName();
+				if (currentRule.compare(ruleName) == 0)
+				{
+					// 3- Remove this ruleName from array
+					elems.erase(e);
+				}
+				else
+				{
+					++e;
+				}
+			}
+		}
+
+		// 4- Remove subscription if array is empty
+		if (!elems.size())
+		{
+			this->lockSubscriptions();
+			allSubscriptions.erase(it);
+			this->unlockSubscriptions();
+		}
+	}
 }

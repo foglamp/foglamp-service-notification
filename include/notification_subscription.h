@@ -30,7 +30,13 @@ class SubscriptionElement
 
 		const std::string&	getAssetName() const { return m_asset; };
 		const std::string&	getNotificationName() const { return m_name; };
-		NotificationRule*	getRule() { return m_notification->getRule(); };
+		NotificationRule*	getRule()
+		{
+			if (m_notification)
+				return m_notification->getRule();
+			else
+				return NULL;
+		};
 		NotificationDelivery*	getDelivery() { return m_notification->getDelivery(); };
 		NotificationInstance*	getInstance() { return m_notification; };
 
@@ -71,6 +77,8 @@ class NotificationSubscription
 		bool			createSubscription(NotificationInstance* instance);
 		void			lockSubscriptions() { m_subscriptionMutex.lock(); };
 		void			unlockSubscriptions() { m_subscriptionMutex.unlock(); };
+		void			removeSubscription(const string& assetName,
+							   const string& ruleName);
 
 	private:
 		EvaluationType		getEvalType(const Value& value);
