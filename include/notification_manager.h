@@ -153,6 +153,7 @@ class NotificationDelivery : public NotificationElement
 		DeliveryPlugin*		getPlugin() { return m_plugin; };
 		const std::string&	getText() const { return m_text; };
 		std::string		toJSON();
+		void			setText(const string& text) { m_text = text; };
 
 	private:
 		DeliveryPlugin*		m_plugin;
@@ -194,6 +195,7 @@ class NotificationInstance
 						       const ConfigCategory& config);
 		void			enable() { m_enable = true; };
 		void			disable() { m_enable = false; };
+		void			setType(NotificationType type) { m_type = type; }; 
 
 	private:
 		const std::string	m_name;

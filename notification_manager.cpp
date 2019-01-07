@@ -1245,79 +1245,30 @@ bool NotificationInstance::updateInstance(const string& name,
 	{
 		// Set disable flag
 		this->disable();
-
-		// 1 unregister current subscriptions
-		NotificationApi* api = NotificationApi::getInstance();
-		NotificationQueue* queue =  NotificationQueue::getInstance();
-
-		// Get all NotificationSubscriptions
-		subscriptions->lockSubscriptions();
-	   	map<string, vector<SubscriptionElement>>&
-			allSubscriptions = subscriptions->getAllSubscriptions();
-		subscriptions->unlockSubscriptions();
-
-		// 2 clean all current rule/asset buffers
-		// Get all registered asset names for this rule:
-		std::vector<NotificationDetail>& assets = this->getRule()->getAssets();
+		// Get rule name
 		string ruleName = this->getRule()->getName();
+		// Get all assets for this rule
+		std::vector<NotificationDetail>& assets = this->getRule()->getAssets();
+
+		// Unregister current subscriptions for this rule and
+		// clean all current rule/asset buffers
+		// remove all assets from the rule
 		for (auto a = assets.begin();
 			  a != assets.end(); )
 		{
-			string assetName = (*a).getAssetName();
-			subscriptions->lockSubscriptions();
-			auto it = allSubscriptions.find(assetName);
-			bool ret = it != allSubscriptions.end();
-			subscriptions->unlockSubscriptions();
-			if (ret)
-			{
-				if ((*it).second.size() == 1)
-				{
-					// We have only one subscription for current asset
-					// call unregister interest
-					subscriptions->unregisterSubscription(assetName);
-				}
-
-				// 3- Remove all data in buffer[ruleName][assetName]
-				// TODO: clear buffers for ruleName, assetName
-
-				// For each SubscriptionElement
-				// 2- Remove assetName in rule object
-				// 3- Remove SubscriptionElement
-				vector<SubscriptionElement> elems = (*it).second;
-				for (auto s = elems.begin();
-					  s != elems.end(); )
-				{
-					// Get ruleName 
-					string currentRule = (*s).getRule()->getName();
-					if (currentRule.compare(ruleName) == 0)
-					{
-						// 2- Remove this ruleName from array
-						elems.erase(s);
-					}
-					else
-					{
-						++s;
-					}
-				}
-				if (!elems.size())
-				{
-					// This is the only subscription for asset, remove it
-					subscriptions->lockSubscriptions();
-					allSubscriptions.erase(it);
-					subscriptions->unlockSubscriptions();
-				}
-			}
-			// Remove asset in the rule
+			subscriptions->removeSubscription((*a).getAssetName(),
+							  ruleName);
+			// Remove asseet
 			assets.erase(a);
 		}
 
-		// Remove current instance
+		// Just remove current instance
 		instances->removeInstance(name);
 
 		// Create a new one with new config
 		bool ret = instances->setupInstance(name, newConfig);
 
-		// Create a new one, not enabled, replacing current one
+		// Just create a new one, not enabled, replacing current one
 		return ret;
 	}
 
@@ -1343,9 +1294,57 @@ bool NotificationInstance::updateInstance(const string& name,
 	 * 4- ....
 	 */
 
-	// NOTE: not yet implemented
+	// Get rule plugin to use
+	string rulePluginName = newConfig.getValue("rule");
+	// Get delivery plugin to use
+	string deliveryPluginName = newConfig.getValue("channel");
 
-	return ret;
+	if (rulePluginName.compare(this->getRulePlugin()->getName()) != 0 ||
+	    deliveryPluginName.compare(this->getDeliveryPlugin()->getName()) != 0)
+	{
+		// Remove current instance
+		instances->removeInstance(name);
+
+		// Create a new one with new config
+		return instances->setupInstance(name, newConfig);
+	}
+
+	// Get notification type
+	string notification_type;
+	if (newConfig.itemExists("notification_type") &&
+	    !newConfig.getValue("notification_type").empty())
+	{
+		notification_type = newConfig.getValue("notification_type");
+	}
+	else
+	{
+		Logger::getLogger()->fatal("Unable to fetch Notification type "
+				"in Notification instance '" + \
+				newConfig.getName() + "' configuration.");
+		return false;
+	}
+	NOTIFICATION_TYPE type = instances->parseType(notification_type);
+	if (type == NOTIFICATION_TYPE::None)
+	{
+		Logger::getLogger()->fatal("Found unsupported Notification type '" + \
+				notification_type + \
+				"' in Notification instance '" + \
+				newConfig.getName() + "' configuration.");
+		return false;
+	}
+	this->setType(type);
+
+	// Set custom text message for delivery
+	if (newConfig.itemExists("text"))
+	{
+		string newCustomText = newConfig.getValue("text");
+		if (this->getDelivery() && !newCustomText.empty())
+		{
+			this->getDelivery()->setText(newCustomText);
+		}
+	}
+
+	return true;
 }
 
 /**
