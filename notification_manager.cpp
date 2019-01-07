@@ -1063,62 +1063,23 @@ bool NotificationManager::createInstance(const string& name,
 bool NotificationManager::setupInstance(const string& name,
 					const ConfigCategory& config)
 {
+	bool enabled;
+	string rulePluginName;
+	string deliveryPluginName;
+	NOTIFICATION_TYPE type;
+	string customText;
+	if (!this->parseConfiguration(config,
+				      enabled,
+				      rulePluginName,
+				      deliveryPluginName,
+				      type,
+				      customText))
+	{
+		return false;
+	}
+
 	string notificationName = config.getName();
 	std::map<std::string, NotificationInstance *>& instances = this->getInstances();
-
-	// Get rule plugin to use
-	const string rulePluginName = config.getValue("rule");
-	// Get delivery plugin to use
-	const string deliveryPluginName = config.getValue("channel");
-	// Is enabled?
-	bool enabled = config.getValue("enable").compare("true") == 0 ||
-		       config.getValue("enable").compare("True") == 0;
-
-	// Get notification type
-	string notification_type;
-	if (config.itemExists("notification_type") &&
-	    !config.getValue("notification_type").empty())
-	{
-		notification_type = config.getValue("notification_type");
-	}
-	else
-	{
-		m_logger->fatal("Unable to fetch Notification type "
-				"in Notification instance '" + \
-				notificationName + "' configuration.");
-		return false;
-	}
-	NOTIFICATION_TYPE type = this->parseType(notification_type);
-	if (type == NOTIFICATION_TYPE::None)
-	{
-		m_logger->fatal("Found unsupported Notification type '" + \
-				notification_type + \
-				"' in Notification instance '" + \
-				notificationName + "' configuration.");
-		return false;
-	}
-
-	// Get custom text message for delivery
-	string customText = "";
-	if (config.itemExists("text"))
-	{
-		customText = config.getValue("text");
-	}
-
-	if (enabled && rulePluginName.empty())
-	{
-		m_logger->fatal("Unable to fetch Notification Rule "
-				"plugin name from Notification instance '" + \
-				notificationName + "' configuration.");
-		return false;
-	}
-	if (enabled && deliveryPluginName.empty())
-	{
-		m_logger->fatal("Unable to fetch Notification Delivery "
-				"plugin name from Notification instance '" + \
-				notificationName + "' configuration");
-		return false;
-	}
 
 	// Load plugins and update categories and register configuration change interest
 	RulePlugin* rule = this->createRuleCategory(notificationName,
@@ -1196,11 +1157,23 @@ bool NotificationInstance::updateInstance(const string& name,
 {
 	bool ret = false;
 
-	// Is enabled?
-	bool enabled = newConfig.getValue("enable").compare("true") == 0 ||
-		       newConfig.getValue("enable").compare("True") == 0;
-
+	bool enabled;
+	string rulePluginName;
+	string deliveryPluginName;
+	NOTIFICATION_TYPE type;
+	string customText;
 	NotificationManager* instances =  NotificationManager::getInstance();
+	// Parse new configuration object
+	if (!instances->parseConfiguration(newConfig,
+					   enabled,
+					   rulePluginName,
+					   deliveryPluginName,
+					   type,
+					   customText))
+	{
+		return false;
+	}
+
 	NotificationSubscription* subscriptions = NotificationSubscription::getInstance();
 
 	// Current instance is not enabled, new config has enable = true 
@@ -1294,14 +1267,30 @@ bool NotificationInstance::updateInstance(const string& name,
 	 * 4- ....
 	 */
 
-	// Get rule plugin to use
-	string rulePluginName = newConfig.getValue("rule");
-	// Get delivery plugin to use
-	string deliveryPluginName = newConfig.getValue("channel");
-
-	if (rulePluginName.compare(this->getRulePlugin()->getName()) != 0 ||
+	if (!this->getRulePlugin() ||
+	    !this->getDeliveryPlugin() ||
+	    rulePluginName.compare(this->getRulePlugin()->getName()) != 0 ||
 	    deliveryPluginName.compare(this->getDeliveryPlugin()->getName()) != 0)
 	{
+		// Set disable flag
+		this->disable();
+		// Get rule name
+		string ruleName = this->getRule()->getName();
+		// Get all assets for this rule
+		std::vector<NotificationDetail>& assets = this->getRule()->getAssets();
+
+		// Unregister current subscriptions for this rule and
+		// clean all current rule/asset buffers
+		// remove all assets from the rule
+		for (auto a = assets.begin();
+		          a != assets.end(); )
+		{
+			subscriptions->removeSubscription((*a).getAssetName(),
+							  ruleName);
+			// Remove asseet
+			assets.erase(a);
+		}
+
 		// Remove current instance
 		instances->removeInstance(name);
 
@@ -1309,39 +1298,17 @@ bool NotificationInstance::updateInstance(const string& name,
 		return instances->setupInstance(name, newConfig);
 	}
 
-	// Get notification type
-	string notification_type;
-	if (newConfig.itemExists("notification_type") &&
-	    !newConfig.getValue("notification_type").empty())
-	{
-		notification_type = newConfig.getValue("notification_type");
-	}
-	else
-	{
-		Logger::getLogger()->fatal("Unable to fetch Notification type "
-				"in Notification instance '" + \
-				newConfig.getName() + "' configuration.");
-		return false;
-	}
-	NOTIFICATION_TYPE type = instances->parseType(notification_type);
-	if (type == NOTIFICATION_TYPE::None)
-	{
-		Logger::getLogger()->fatal("Found unsupported Notification type '" + \
-				notification_type + \
-				"' in Notification instance '" + \
-				newConfig.getName() + "' configuration.");
-		return false;
-	}
+	/**
+	 * We can easily update some instance objects here
+	 */
+
+	// Update type
 	this->setType(type);
 
-	// Set custom text message for delivery
-	if (newConfig.itemExists("text"))
+	// Update custom text
+	if (this->getDelivery() && !customText.empty())
 	{
-		string newCustomText = newConfig.getValue("text");
-		if (this->getDelivery() && !newCustomText.empty())
-		{
-			this->getDelivery()->setText(newCustomText);
-		}
+		this->getDelivery()->setText(customText);
 	}
 
 	return true;
@@ -1371,4 +1338,80 @@ bool NotificationManager::removeInstance(const string& instanceName)
 		ret = true;
 	}
 	return ret;
+}
+
+/**
+ * Parse a notification instance configuration object.
+ *
+ * @param    config			The instance configuration object.
+ * @param    enabled			Enable output parameter.
+ * @param    rulePluginName		The rule plugin output parameter.
+ * @param    deliveryPluginName		The delivery plugin output parameter.
+ * @param    type			The notification type output parameter.
+ * @param    customText			The custom text output parameter.
+ * @return				True is configuration parsing succeded,
+ *					false otherwise.
+ */
+bool NotificationManager::parseConfiguration(const ConfigCategory& config,
+					     bool& enabled,
+					     string& rulePluginName,
+					     string& deliveryPluginName,
+					     NOTIFICATION_TYPE& type,
+					     string& customText)
+{
+	string notificationName = config.getName();
+	// The rule plugin to use
+	rulePluginName = config.getValue("rule");
+	// The delivery plugin to use
+	deliveryPluginName = config.getValue("channel");
+	// Is enabled?
+	enabled = config.getValue("enable").compare("true") == 0 ||
+		  config.getValue("enable").compare("True") == 0;
+
+	// Get notification type
+	string notification_type;
+	if (config.itemExists("notification_type") &&
+	    !config.getValue("notification_type").empty())
+	{
+		notification_type = config.getValue("notification_type");
+	}
+	else
+	{
+		m_logger->fatal("Unable to fetch Notification type "
+				"in Notification instance '" + \
+				notificationName + "' configuration.");
+		return false;
+	}
+	type = this->parseType(notification_type);
+	if (type == NOTIFICATION_TYPE::None)
+	{
+		m_logger->fatal("Found unsupported Notification type '" + \
+				notification_type + \
+				"' in Notification instance '" + \
+				notificationName + "' configuration.");
+		return false;
+	}
+
+	// Get custom text message for delivery
+	if (config.itemExists("text"))
+	{
+		customText = config.getValue("text");
+	}
+
+	if (enabled && rulePluginName.empty())
+	{
+		m_logger->fatal("Unable to fetch Notification Rule "
+				"plugin name from Notification instance '" + \
+				notificationName + "' configuration.");
+		return false;
+	}
+	if (enabled && deliveryPluginName.empty())
+	{
+		m_logger->fatal("Unable to fetch Notification Delivery "
+				"plugin name from Notification instance '" + \
+				notificationName + "' configuration");
+		return false;
+	}
+
+	return true;
 }
