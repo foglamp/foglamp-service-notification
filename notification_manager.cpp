@@ -1173,3 +1173,16 @@ bool NotificationManager::createInstance(const string& name,
 {
 	return true;
 }
+
+/**
+ * Audit log entry for sent notification
+ *
+ * @param       notificationName	The notification just delivered
+ * @return				True on success, false otherwise
+ */
+bool NotificationManager::auditNotification(const string& notificationName)
+{
+	return m_managerClient->addAuditEntry("NTFSN",
+					      "INFORMATION",
+					      "{\"name\": \"" + notificationName + "\"}");
+}

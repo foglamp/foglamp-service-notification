@@ -233,6 +233,7 @@ class NotificationManager
 		std::string		getPluginInfo(PLUGIN_INFORMATION* info);
 		bool			createInstance(const std::string& name,
 						       const std::string& category);
+		bool			auditNotification(const std::string& notification);
 
 	private:
 		PLUGIN_HANDLE		loadRulePlugin(const std::string& rulePluginName);
