@@ -242,12 +242,12 @@ class NotificationManager
 		bool			removeInstance(const string& instanceName);
 		void			lockInstances() { m_instancesMutex.lock(); };
 		void			unlockInstances() { m_instancesMutex.unlock(); };
-		bool			parseConfiguration(const ConfigCategory& config,
-							   bool& enable,
-							   std::string& rulePluginName,
-							   std::string& deliveryPluginName,
-							   NOTIFICATION_TYPE& type,
-							   std::string& customText);
+		bool			getConfigurationItems(const ConfigCategory& config,
+							      bool& enable,
+							      std::string& rulePluginName,
+							      std::string& deliveryPluginName,
+							      NOTIFICATION_TYPE& type,
+							      std::string& customText);
 
 	private:
 		PLUGIN_HANDLE		loadRulePlugin(const std::string& rulePluginName);

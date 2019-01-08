@@ -1068,12 +1068,12 @@ bool NotificationManager::setupInstance(const string& name,
 	string deliveryPluginName;
 	NOTIFICATION_TYPE type;
 	string customText;
-	if (!this->parseConfiguration(config,
-				      enabled,
-				      rulePluginName,
-				      deliveryPluginName,
-				      type,
-				      customText))
+	if (!this->getConfigurationItems(config,
+					 enabled,
+					 rulePluginName,
+					 deliveryPluginName,
+					 type,
+					 customText))
 	{
 		return false;
 	}
@@ -1164,12 +1164,12 @@ bool NotificationInstance::updateInstance(const string& name,
 	string customText;
 	NotificationManager* instances =  NotificationManager::getInstance();
 	// Parse new configuration object
-	if (!instances->parseConfiguration(newConfig,
-					   enabled,
-					   rulePluginName,
-					   deliveryPluginName,
-					   type,
-					   customText))
+	if (!instances->getConfigurationItems(newConfig,
+					      enabled,
+					      rulePluginName,
+					      deliveryPluginName,
+					      type,
+					      customText))
 	{
 		return false;
 	}
@@ -1366,7 +1366,7 @@ bool NotificationManager::removeInstance(const string& instanceName)
 }
 
 /**
- * Parse a notification instance configuration object.
+ * Get instance configuration items.
  *
  * @param    config			The instance configuration object.
  * @param    enabled			Enable output parameter.
@@ -1377,12 +1377,12 @@ bool NotificationManager::removeInstance(const string& instanceName)
  * @return				True is configuration parsing succeded,
  *					false otherwise.
  */
-bool NotificationManager::parseConfiguration(const ConfigCategory& config,
-					     bool& enabled,
-					     string& rulePluginName,
-					     string& deliveryPluginName,
-					     NOTIFICATION_TYPE& type,
-					     string& customText)
+bool NotificationManager::getConfigurationItems(const ConfigCategory& config,
+						bool& enabled,
+						string& rulePluginName,
+						string& deliveryPluginName,
+						NOTIFICATION_TYPE& type,
+						string& customText)
 {
 	string notificationName = config.getName();
 	// The rule plugin to use
