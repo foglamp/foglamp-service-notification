@@ -215,6 +215,10 @@ bool NotificationService::start(string& coreAddress,
 		return false;
 	}
 
+	m_managerClient->addAuditEntry("NTFST",
+					"INFORMATION",
+					"{\"name\": \"" + m_name + "\"}");
+
 	// We have notitication instances loaded
 	// (1) Start the NotificationQueue
 	NotificationQueue queue(m_name);
@@ -248,6 +252,10 @@ bool NotificationService::start(string& coreAddress,
 	queue.stop();
 
 	m_logger->info("Notification service '" + m_name + "' shutdown completed.");
+
+	m_managerClient->addAuditEntry("NTFSD",
+					"INFORMATION",
+					"{\"name\": \"" + m_name + "\"}");
 
 	return true;
 }
