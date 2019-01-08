@@ -500,7 +500,10 @@ bool NotificationApi::createNotificationRule(const string& name,
 	NotificationManager* manager = NotificationManager::getInstance();
 	if (manager)
 	{
-		ret = manager->createRuleCategory(name, rule);
+		RulePlugin* rulePlugin = manager->createRuleCategory(name, rule);
+		ret = rulePlugin != NULL;
+		// Delete plugin object
+		delete rulePlugin;
 	}
 
 	return ret;
@@ -523,7 +526,10 @@ bool NotificationApi::createNotificationDelivery(const string& name,
 	NotificationManager* manager = NotificationManager::getInstance();
 	if (manager)
 	{
-		ret = manager->createDeliveryCategory(name, delivery);
+		DeliveryPlugin* deliveryPlugin = manager->createDeliveryCategory(name, delivery);
+		ret = deliveryPlugin != NULL;
+		// Delete plugin object
+		delete deliveryPlugin;
 	}
 
 	return ret;
