@@ -21,6 +21,8 @@
 #include <string.h>
 #include "plugin_api.h"
 #include <overmax_rule.h>
+#include <notification_subscription.h>
+#include <notification_queue.h>
 
 using namespace std;
 
@@ -232,157 +234,20 @@ NotificationManager* NotificationManager::getInstance()
 /**
  * Load all notification instances found in "Notifications" FogLAMP category.
  *
- * @return			True on success, false otherwise.
- * @throw runtime_error		On fatal errors.
  */
-bool NotificationManager::loadInstances()
+void NotificationManager::loadInstances()
 {
 	// Get child categories of "Notifications"
 	ConfigCategories instances = m_managerClient->getChildCategories("Notifications");
 
 	for (int i = 0; i < instances.length(); i++)
 	{
-		// Fetch instance configuration
-		ConfigCategory instance = m_managerClient->getCategory(instances[i]->getName());
+		// Fetch instance configuration category
+		ConfigCategory config = m_managerClient->getCategory(instances[i]->getName());
 
-		// Get rule plugin to use
-		const string rulePluginName = instance.getValue("rule");
-		// Get delivery plugin to use
-		const string deliveryPluginName = instance.getValue("channel");
-		// Is enabled?
-		bool enabled = instance.getValue("enable").compare("true") == 0 ||
-			       instance.getValue("enable").compare("True") == 0;
-		// Get notification type
-		string notification_type;
-		if (instance.itemExists("notification_type") &&
-		    !instance.getValue("notification_type").empty())
-		{
-			notification_type = instance.getValue("notification_type");
-		}
-		else
-		{
-			m_logger->fatal("Unable to fetch Notification type "
-					"in Notification instance '" + \
-					instance.getName() + "' configuration.");
-			return false;
-		}
-		NOTIFICATION_TYPE type = this->parseType(notification_type);
-		if (type == NOTIFICATION_TYPE::None)
-		{
-			m_logger->fatal("Found unsupported Notification type '" + \
-					notification_type + \
-					"' in Notification instance '" + \
-					instance.getName() + "' configuration.");
-			return false;
-		}
-
-		// Get custom text message for delivery
-		string customText = "";
-		if (instance.itemExists("text"))
-		{
-			customText = instance.getValue("text");
-		}
-
-		if (enabled && rulePluginName.empty())
-		{
-			m_logger->fatal("Unable to fetch Notification Rule "
-					"plugin name from Notification instance '" + \
-					instance.getName() + "' configuration.");
-			return false;
-		}
-		if (enabled && deliveryPluginName.empty())
-		{
-			m_logger->fatal("Unable to fetch Notification Delivery "
-					"plugin name from Notification instance '" + \
-					instance.getName() + "' configuration");
-			return false;
-		}
-
-		// Load plugins and get new class instences 
-		RulePlugin* rule = this->createRulePlugin(rulePluginName);
-		DeliveryPlugin* deliver = this->createDeliveryPlugin(deliveryPluginName);
-		if (rule && deliver)
-		{
-			// Get plugins default configuration
-			string rulePluginConfig = rule->getInfo()->config;
-			string deliveryPluginConfig = deliver->getInfo()->config;
-
-			// Create category names for plugins under instanceName
-			// with names: "rule" + instanceName, "delivery" + instanceName
-			string ruleCategoryName = "rule" + instance.getName();
-			string deliveryCategoryName = "delivery" + instance.getName();
-
-			DefaultConfigCategory ruleDefConfig(ruleCategoryName,
-							    rulePluginConfig);	
-			DefaultConfigCategory deliveryDefConfig(deliveryCategoryName,
-								deliveryPluginConfig);
-
-			if (!m_managerClient->addCategory(ruleDefConfig, true))
-			{
-				string errMsg("Cannot create/update '" + \
-					      ruleCategoryName + "' rule plugin category");
-				m_logger->fatal(errMsg.c_str());
-				delete rule;
-				delete deliver;
-				throw runtime_error(errMsg);
-			}
-			if (!m_managerClient->addCategory(deliveryDefConfig, true))
-			{
-				string errMsg("Cannot create/update '" + \
-					      deliveryCategoryName + "' delivery plugin category");
-				m_logger->fatal(errMsg.c_str());
-				delete rule;
-				delete deliver;
-				throw runtime_error(errMsg);
-			}
-
-			// Initialise plugins
-			// Get up-to-date plugin configurations
-			ConfigCategory ruleConfig = m_managerClient->getCategory(ruleCategoryName);
-			ConfigCategory deliveryConfig = m_managerClient->getCategory(deliveryCategoryName);
-
-			// Call rule "plugin_init" with configuration
-			rule->init(ruleConfig);
-
-			// Call delivery "plugin_init" with configuration
-			deliver->init(deliveryConfig);
-
-			// Add plugin category name under service/process config name
-			vector<string> children;
-			children.push_back(ruleCategoryName);
-			children.push_back(deliveryCategoryName);
-			m_managerClient->addChildCategories(instance.getName(),
-							    children);
-
-			// Instantiate NotificationRule and NotificationDelivery classes
-			NotificationRule* theRule = new NotificationRule(ruleCategoryName,
-									 instance.getName(),
-									 rule);
-			NotificationDelivery* theDelivery = new NotificationDelivery(deliveryCategoryName,
-										     instance.getName(),
-										     deliver,
-										     customText);
-
-			// Add the new instance
-			this->addInstance(instance.getName(),
-					  enabled,
-					  type,
-					  theRule,
-					  theDelivery);
-		}
-		else
-		{
-			delete deliver;
-			delete rule;
-			this->addInstance(instance.getName(),
-					  enabled,
-					  type,
-					  NULL,
-					  NULL);
-		}
+		// Create the NotificationInstance object
+		this->setupInstance(instances[i]->getName(), config);
 	}
-
-	return true;
 }
 
 /**
@@ -399,6 +264,9 @@ void NotificationManager::addInstance(const string& instanceName,
 				      NotificationRule* rule,
 				      NotificationDelivery* delivery)
 {
+	// Protect changes to m_instances
+	lock_guard<mutex> guard(m_instancesMutex);
+
 	if (m_instances.find(instanceName) != m_instances.end())
 	{
 		// Already set
@@ -854,11 +722,6 @@ string NotificationManager::getJSONRules()
 	list<std::string> pList;
 	plugins->getInstalledPlugins("notificationRule", pList);
 
-	if (!pList.size())
-	{
-		return "{}";
-	}
-
 	bool foundPlugin = false;
 	ret = "[";
 
@@ -1010,17 +873,18 @@ bool NotificationManager::createEmptyInstance(const string& name)
  *
  * @param    name	The notification name 
  * @param    rule	The notification rule to create
- * @return		True on success, false otherwise
+ * @return		RulePlugin object pointer on success,
+ *			NULL otherwise
  */
-bool NotificationManager::createRuleCategory(const string& name,
-					     const string& rule)
+RulePlugin* NotificationManager::createRuleCategory(const string& name,
+						    const string& rule)
 {
-        bool ret = true;
 	RulePlugin* rulePlugin = this->createRulePlugin(rule);
-
 	if (!rulePlugin)
 	{
-		return false;
+		string errMsg("Cannot load rule plugin '" + rule + "'");
+		m_logger->fatal(errMsg.c_str());
+		return NULL;
 	}
 
 	// Create category names for plugins under instanceName
@@ -1040,7 +904,8 @@ bool NotificationManager::createRuleCategory(const string& name,
 			      ruleCategoryName + "' rule plugin category");
 		m_logger->fatal(errMsg.c_str());
 
-		ret = false;
+		delete rulePlugin;
+		return NULL;
 	}
 
 	try
@@ -1055,11 +920,16 @@ bool NotificationManager::createRuleCategory(const string& name,
 	}
 	catch (std::exception* ex)
 	{
+		string errMsg("Cannot create/update '" + \
+			      ruleCategoryName + "' rule plugin category: " + ex->what());
+		m_logger->fatal(errMsg.c_str());
 		delete ex;
-		ret = false;
+		delete rulePlugin;
+		return NULL;
 	}
 
-	return ret;
+	// Return plugin object
+	return rulePlugin;
 }
 
 /**
@@ -1068,18 +938,19 @@ bool NotificationManager::createRuleCategory(const string& name,
  *
  * @param    name	The notification name 
  * @param    delivery	The notification delivery to create
- * @return		True on success, false otherwise
+ * @return		DeliveryPlugin object pointer on success,
+ *			NULL otherwise
  */
-bool NotificationManager::createDeliveryCategory(const string& name,
+DeliveryPlugin* NotificationManager::createDeliveryCategory(const string& name,
 						 const string& delivery)
 {
-        bool ret = true;
-
 	DeliveryPlugin* deliveryPlugin = this->createDeliveryPlugin(delivery);
 
 	if (!deliveryPlugin)
 	{
-		return false;
+		string errMsg("Cannot load delivery plugin '" + delivery + "'");
+		m_logger->fatal(errMsg.c_str());
+		return NULL;
 	}
 
 	// Create category names for plugins under instanceName
@@ -1099,7 +970,8 @@ bool NotificationManager::createDeliveryCategory(const string& name,
 			      deliveryCategoryName + "' delivery plugin category");
 		m_logger->fatal(errMsg.c_str());
 
-		ret = false;
+		delete deliveryPlugin;
+		return NULL;
 	}
 
 	try
@@ -1114,11 +986,15 @@ bool NotificationManager::createDeliveryCategory(const string& name,
 	}
 	catch (std::exception* ex)
 	{
+		string errMsg("Cannot create/update '" + \
+			      deliveryCategoryName + "' rule delivery category: " + ex->what());
 		delete ex;
-		ret = false;
+		delete deliveryPlugin;
+		return NULL;
 	}
 
-	return ret;
+	// Return plugin object
+	return deliveryPlugin;
 }
 
 /**
@@ -1130,10 +1006,12 @@ bool NotificationManager::createDeliveryCategory(const string& name,
  * @param    category		The JSON string with new configuration
  * @return			True on success, false otherwise.
  */
-bool NotificationInstance::reconfigure(const string&name,
+bool NotificationInstance::reconfigure(const string& name,
 					const string& category)
 {
-	return true;
+	ConfigCategory newConfig(name, category);
+
+	return this->updateInstance(name, newConfig);
 }
 
 /**
@@ -1161,15 +1039,404 @@ string NotificationManager::getPluginInfo(PLUGIN_INFORMATION* info)
 
 /**
  * Create a notification instance
- *                                       
- * NOTE: not yet implemented
- *      
+ *
  * @param    name		The notification to create
  * @param    category		The JSON string with configuration
- * @return			True on success, false otherwise.
+ * @return                      True on success, false otherwise.
  */
 bool NotificationManager::createInstance(const string& name,
 					 const string& category)
 {
+	ConfigCategory config(name, category);
+
+	return this->setupInstance(name, config);
+}
+
+/**
+ * Create and add a new Notification instance to instances map.
+ * Register also interest for configuration changes.
+ *
+ * @param    name		The instance name to create.
+ * @param    config		The configuration for the new instance.
+ * @return			True on success, false otherwise.
+ */
+bool NotificationManager::setupInstance(const string& name,
+					const ConfigCategory& config)
+{
+	bool enabled;
+	string rulePluginName;
+	string deliveryPluginName;
+	NOTIFICATION_TYPE type;
+	string customText;
+	if (!this->getConfigurationItems(config,
+					 enabled,
+					 rulePluginName,
+					 deliveryPluginName,
+					 type,
+					 customText))
+	{
+		return false;
+	}
+
+	string notificationName = config.getName();
+	std::map<std::string, NotificationInstance *>& instances = this->getInstances();
+
+	// Load plugins and update categories and register configuration change interest
+	RulePlugin* rule = this->createRuleCategory(notificationName,
+						    rulePluginName) ;
+	DeliveryPlugin* deliver = this->createDeliveryCategory(notificationName,
+						    deliveryPluginName);
+
+	if (rule && deliver)
+	{
+		// Create category names for plugins under instanceName
+		// Register category interest as well
+		string ruleCategoryName = "rule" + notificationName;
+		string deliveryCategoryName = "delivery" + notificationName;
+
+		// Initialise plugins
+		// Get up-to-date plugin configurations
+		ConfigCategory ruleConfig = m_managerClient->getCategory(ruleCategoryName);
+		ConfigCategory deliveryConfig = m_managerClient->getCategory(deliveryCategoryName);
+
+		// Call rule "plugin_init" with configuration
+		rule->init(ruleConfig);
+
+		// Call delivery "plugin_init" with configuration
+		deliver->init(deliveryConfig);
+
+		// Add plugin category name under service/process config name
+		vector<string> children;
+		children.push_back(ruleCategoryName);
+		children.push_back(deliveryCategoryName);
+		m_managerClient->addChildCategories(config.getName(),
+						    children);
+
+		// Instantiate NotificationRule and NotificationDelivery classes
+		NotificationRule* theRule = new NotificationRule(ruleCategoryName,
+								 config.getName(),
+								 rule);
+		NotificationDelivery* theDelivery = new NotificationDelivery(deliveryCategoryName,
+									     config.getName(),
+									     deliver,
+									     customText);
+
+		// Add the new instance
+		this->addInstance(config.getName(),
+				  enabled,
+				  type,
+				  theRule,
+				  theDelivery);
+	}
+	else
+	{
+		// Add a new instance without plugins
+		delete deliver;
+		delete rule;
+		this->addInstance(config.getName(),
+				  enabled,
+				  type,
+				  NULL,
+				  NULL);
+	}
+
+	// Register category for configuration updates
+	m_service->registerCategory(config.getName());
+
+	return true;
+}
+
+/**
+ * Update an existing notification instance
+ *
+ * @param    name		The  notification instance name
+ * @param    newConfig		The new configuration to apply
+ */
+bool NotificationInstance::updateInstance(const string& name,
+					  const ConfigCategory& newConfig)
+{
+	bool ret = false;
+
+	bool enabled;
+	string rulePluginName;
+	string deliveryPluginName;
+	NOTIFICATION_TYPE type;
+	string customText;
+	NotificationManager* instances =  NotificationManager::getInstance();
+	// Parse new configuration object
+	if (!instances->getConfigurationItems(newConfig,
+					      enabled,
+					      rulePluginName,
+					      deliveryPluginName,
+					      type,
+					      customText))
+	{
+		return false;
+	}
+
+	NotificationSubscription* subscriptions = NotificationSubscription::getInstance();
+
+	// Current instance is not enabled, new config has enable = true 
+	if (enabled && !this->isEnabled())
+	{
+		bool enabled = false;
+		Logger::getLogger()->info("Enabling notification instance '%s'",
+					  name.c_str());
+
+		// Remove current instance
+		instances->removeInstance(name);
+
+		// Create a new one with new configuration
+		if (instances->setupInstance(name, newConfig))
+		{
+			// Get new instance
+			// Protect access to m_instances
+			instances->lockInstances();
+			auto i = instances->getInstances().find(name);
+			bool ret = i != instances->getInstances().end();
+			instances->unlockInstances();
+			if (ret)
+			{
+				// Create a new subscription
+				subscriptions->createSubscription((*i).second);
+
+				Logger::getLogger()->info("Succesfully enabled notification instance '%s'",
+							  name.c_str());
+				enabled = true;
+			}
+		}
+		else
+		{
+			Logger::getLogger()->fatal("Errors found while enabling notification instance '%s'",
+						   name.c_str());
+		}
+		return enabled;
+	}
+
+	// Current notification is enabled, new configuration is disabling it.
+	if (!enabled && this->isEnabled())
+	{
+		// Set disable flag
+		this->disable();
+		// Get rule name
+		if (!this->getRule())
+		{
+			return false;
+		}
+		string ruleName = this->getRule()->getName();
+		// Get all assets for this rule
+		std::vector<NotificationDetail>& assets = this->getRule()->getAssets();
+
+		// Unregister current subscriptions for this rule and
+		// clean all current rule/asset buffers
+		// remove all assets from the rule
+		for (auto a = assets.begin();
+			  a != assets.end(); )
+		{
+			subscriptions->removeSubscription((*a).getAssetName(),
+							  ruleName);
+			// Remove asseet
+			assets.erase(a);
+		}
+
+		// Just remove current instance
+		instances->removeInstance(name);
+
+		// Create a new one with new config
+		bool ret = instances->setupInstance(name, newConfig);
+
+		// Just create a new one, not enabled, replacing current one
+		return ret;
+	}
+
+	// Current instance is not enabled and
+	// in the new configuration it's still not enabled
+	if (!enabled && !this->isEnabled())
+	{
+		// Just remove current instance
+		instances->removeInstance(name);
+
+		// Just create a new one with new config
+		return instances->setupInstance(name, newConfig);
+	}
+
+	/**
+	 * This is an update with plugins, type etc:
+	 *
+	 * 1- Check rule/delivery plugin change:
+	 *    remove instance & create a new one
+	 * 2- Notification type change: update current instance
+	 * 3- Custom text: it only affects delivery plugin:
+	 *	easy way: remove instance & create a new one
+	 * 4- ....
+	 */
+
+	if (!this->getRulePlugin() ||
+	    !this->getDeliveryPlugin() ||
+	    rulePluginName.compare(this->getRulePlugin()->getName()) != 0 ||
+	    deliveryPluginName.compare(this->getDeliveryPlugin()->getName()) != 0)
+	{
+		bool retCode = false;
+
+		// Set disable flag
+		this->disable();
+		// Get rule name
+		if (this->getRule())
+		{
+			string ruleName = this->getRule()->getName();
+			// Get all assets for this rule
+			std::vector<NotificationDetail>& assets = this->getRule()->getAssets();
+
+			// Unregister current subscriptions for this rule and
+			// clean all current rule/asset buffers
+			// remove all assets from the rule
+			for (auto a = assets.begin();
+			          a != assets.end(); )
+			{
+				subscriptions->removeSubscription((*a).getAssetName(),
+								  ruleName);
+				// Remove asseet
+				assets.erase(a);
+			}
+		}
+
+		// Remove current instance
+		instances->removeInstance(name);
+
+		// Create a new one with new config
+		if (instances->setupInstance(name, newConfig))
+		{
+			// Get new instance
+			// Protect access to m_instances
+			instances->lockInstances();
+			auto i = instances->getInstances().find(name);
+			bool ret = i != instances->getInstances().end();
+			instances->unlockInstances();
+			if (ret)
+			{
+				// Create a new subscription
+				subscriptions->createSubscription((*i).second);
+				retCode = true;
+			}
+		}
+
+		return retCode;
+	}
+
+	/**
+	 * We can easily update some instance objects here
+	 */
+
+	// Update type
+	this->setType(type);
+
+	// Update custom text
+	if (this->getDelivery() && !customText.empty())
+	{
+		this->getDelivery()->setText(customText);
+	}
+
+	return true;
+}
+
+/**
+ * Remove an instance from instances map
+ *
+ * @param    instanceName	The instance name to remove.
+ * @return			True for found instance removed,
+ *				false otherwise.
+ */
+bool NotificationManager::removeInstance(const string& instanceName)
+{
+	bool ret = false;
+
+	// Protect access to m_instances
+	lock_guard<mutex> guard(m_instancesMutex);
+
+	auto r = m_instances.find(instanceName);
+	if (r != m_instances.end())
+	{
+		delete (*r).second;
+		(*r).second = NULL;
+		m_instances.erase(r);
+
+		ret = true;
+	}
+	return ret;
+}
+
+/**
+ * Get instance configuration items.
+ *
+ * @param    config			The instance configuration object.
+ * @param    enabled			Enable output parameter.
+ * @param    rulePluginName		The rule plugin output parameter.
+ * @param    deliveryPluginName		The delivery plugin output parameter.
+ * @param    type			The notification type output parameter.
+ * @param    customText			The custom text output parameter.
+ * @return				True is configuration parsing succeded,
+ *					false otherwise.
+ */
+bool NotificationManager::getConfigurationItems(const ConfigCategory& config,
+						bool& enabled,
+						string& rulePluginName,
+						string& deliveryPluginName,
+						NOTIFICATION_TYPE& type,
+						string& customText)
+{
+	string notificationName = config.getName();
+	// The rule plugin to use
+	rulePluginName = config.getValue("rule");
+	// The delivery plugin to use
+	deliveryPluginName = config.getValue("channel");
+	// Is it enabled?
+	enabled = config.getValue("enable").compare("true") == 0 ||
+		  config.getValue("enable").compare("True") == 0;
+
+	// Get notification type
+	string notification_type;
+	if (config.itemExists("notification_type") &&
+	    !config.getValue("notification_type").empty())
+	{
+		notification_type = config.getValue("notification_type");
+	}
+	else
+	{
+		m_logger->fatal("Unable to fetch Notification type "
+				"in Notification instance '" + \
+				notificationName + "' configuration.");
+		return false;
+	}
+	type = this->parseType(notification_type);
+	if (type == NOTIFICATION_TYPE::None)
+	{
+		m_logger->fatal("Found unsupported Notification type '" + \
+				notification_type + \
+				"' in Notification instance '" + \
+				notificationName + "' configuration.");
+		return false;
+	}
+
+	// Get custom text message for delivery
+	if (config.itemExists("text"))
+	{
+		customText = config.getValue("text");
+	}
+
+	if (enabled && rulePluginName.empty())
+	{
+		m_logger->fatal("Unable to fetch Notification Rule "
+				"plugin name from Notification instance '" + \
+				notificationName + "' configuration.");
+		return false;
+	}
+	if (enabled && deliveryPluginName.empty())
+	{
+		m_logger->fatal("Unable to fetch Notification Delivery "
+				"plugin name from Notification instance '" + \
+				notificationName + "' configuration");
+		return false;
+	}
+
 	return true;
 }

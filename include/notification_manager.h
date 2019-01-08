@@ -76,8 +76,8 @@ class NotificationDetail
 		const time_t		getInterval() const { return m_value.getInterval(); };
 
 	private:
-		const std::string	m_asset;
-		const std::string	m_rule;
+		std::string		m_asset;
+		std::string		m_rule;
 		EvaluationType		m_value;
 };
 
@@ -153,6 +153,7 @@ class NotificationDelivery : public NotificationElement
 		DeliveryPlugin*		getPlugin() { return m_plugin; };
 		const std::string&	getText() const { return m_text; };
 		std::string		toJSON();
+		void			setText(const string& text) { m_text = text; };
 
 	private:
 		DeliveryPlugin*		m_plugin;
@@ -173,13 +174,13 @@ class NotificationInstance
 		~NotificationInstance();
 
 		const std::string&	getName() const { return m_name; };
-		NotificationRule*	getRule() const { return m_rule; };
-		NotificationDelivery*	getDelivery() const { return m_delivery; };
-		RulePlugin*		getRulePlugin() const
+		NotificationRule*	getRule() { return m_rule; };
+		NotificationDelivery*	getDelivery() { return m_delivery; };
+		RulePlugin*		getRulePlugin()
 		{
 			return (m_rule ? m_rule->getPlugin() : NULL);
 		};
-		DeliveryPlugin*		getDeliveryPlugin() const
+		DeliveryPlugin*		getDeliveryPlugin()
 		{
 			return (m_delivery ? m_delivery->getPlugin() : NULL);
 		};
@@ -190,6 +191,11 @@ class NotificationInstance
 		bool			handleState(bool evalRet);
 		bool			reconfigure(const std::string& name,
 						    const std::string& category);
+		bool			updateInstance(const string& name,
+						       const ConfigCategory& config);
+		void			enable() { m_enable = true; };
+		void			disable() { m_enable = false; };
+		void			setType(NotificationType type) { m_type = type; }; 
 
 	private:
 		const std::string	m_name;
@@ -216,23 +222,32 @@ class NotificationManager
 		static NotificationManager*
 					getInstance();
 		std::string		getJSONInstances() const;
-		bool 			loadInstances();
+		void 			loadInstances();
 		std::map<std::string, NotificationInstance *>&
 					getInstances() { return m_instances; };
 		NotificationInstance*	getNotificationInstance(const std::string& instanceName) const;
 		NOTIFICATION_TYPE	parseType(const std::string& type);
-		RulePlugin*		createRulePlugin(const std::string& rulePluginName);
-		DeliveryPlugin*		createDeliveryPlugin(const std::string& deliveryPluginName);
 		std::string		getJSONRules();
 		std::string		getJSONDelivery();
 		bool			createEmptyInstance(const std::string& name);
-		bool			createRuleCategory(const std::string& name,
+		RulePlugin*		createRuleCategory(const std::string& name,
 							   const std::string& rule);
-		bool			createDeliveryCategory(const std::string& name,
+		 DeliveryPlugin*	createDeliveryCategory(const std::string& name,
 							       const std::string& delivery);
 		std::string		getPluginInfo(PLUGIN_INFORMATION* info);
 		bool			createInstance(const std::string& name,
 						       const std::string& category);
+		bool			setupInstance(const string& name,
+						      const ConfigCategory& config);
+		bool			removeInstance(const string& instanceName);
+		void			lockInstances() { m_instancesMutex.lock(); };
+		void			unlockInstances() { m_instancesMutex.unlock(); };
+		bool			getConfigurationItems(const ConfigCategory& config,
+							      bool& enable,
+							      std::string& rulePluginName,
+							      std::string& deliveryPluginName,
+							      NOTIFICATION_TYPE& type,
+							      std::string& customText);
 
 	private:
 		PLUGIN_HANDLE		loadRulePlugin(const std::string& rulePluginName);
@@ -245,6 +260,8 @@ class NotificationManager
 						    NOTIFICATION_TYPE type,
 						    NotificationRule* rule,
 						    NotificationDelivery* delivery);
+		RulePlugin*		createRulePlugin(const std::string& rulePluginName);
+		DeliveryPlugin*		createDeliveryPlugin(const std::string& deliveryPluginName);
 
 	private:
 		const std::string	m_name;
@@ -257,5 +274,6 @@ class NotificationManager
 					m_builtinRules;
 		NotificationService*	m_service;
 		Logger*			m_logger;
+		std::mutex		m_instancesMutex;
 };
 #endif
