@@ -250,6 +250,7 @@ class NotificationManager
 							      NOTIFICATION_TYPE& type,
 							      std::string& customText);
 		bool			auditNotification(const std::string& notification);
+		bool			APIdeleteInstance(const string& instanceName);
 		void			updateSentStats() { m_stats.sent++; };
 
 	private:

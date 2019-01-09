@@ -1464,3 +1464,26 @@ bool NotificationManager::auditNotification(const string& notificationName)
 					      "INFORMATION",
 					      "{\"name\": \"" + notificationName + "\"}");
 }
+
+/**
+ * Remove an instance via API call
+ *
+ * Update notification statistics
+ *
+ * @param    instanceName	The instance name to remove.
+ * @return			True for found instance removed,
+ *				false otherwise.
+ */
+bool NotificationManager::APIdeleteInstance(const string& instanceName)
+{
+
+	bool ret = this->removeInstance(instanceName);
+
+	if (ret)
+	{
+		m_stats.removed++;
+		m_stats.total--;
+	}
+
+	return ret;
+}
