@@ -49,7 +49,8 @@ class NotificationApi
 			ObjGetNotificationName,
 			ObjCreateNotification,
 			ObjCreateNotificationRule,
-			ObjCreateNotificationDelivery
+			ObjCreateNotificationDelivery,
+			ObjDeleteNotification
 		} NOTIFICATION_OBJECT;
 
 		NotificationApi(const unsigned short port,
@@ -76,6 +77,7 @@ class NotificationApi
 		const std::string&
 				getCallBackURL() const { return m_callBackURL; };
 		void		setCallBackURL();
+		bool		removeNotification(const std::string& notificationName);
 
 	private:
 		void		internalError(shared_ptr<HttpServer::Response>,
