@@ -618,6 +618,8 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 				// Audit log
 				NotificationManager* instances = NotificationManager::getInstance();
 				instances->auditNotification(instance->getName());
+				// Update sent notification statistics
+				instances->updateSentStats();
 			}
 		}
 	}
