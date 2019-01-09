@@ -500,7 +500,7 @@ bool NotificationApi::createNotification(const string& name)
 	NotificationManager* manager = NotificationManager::getInstance();
 	if (manager)
 	{
-		ret = manager->createEmptyInstance(name);
+		ret = manager->APIcreateEmptyInstance(name);
 	}
 	return ret;
 }

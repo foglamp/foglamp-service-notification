@@ -204,7 +204,11 @@ NotificationManager::NotificationManager(const std::string& serviceName,
 	/**
 	 * Add here all the builtin rules we want to make available:
 	 */
-	 this->registerBuiltinRule<OverMaxRule>("OverMaxRule");
+	this->registerBuiltinRule<OverMaxRule>("OverMaxRule");
+
+	// Register statistics
+	ManagementApi *management = ManagementApi::getInstance();
+	management->registerStats(&m_stats);
 }
 
 /**
@@ -246,7 +250,11 @@ void NotificationManager::loadInstances()
 		ConfigCategory config = m_managerClient->getCategory(instances[i]->getName());
 
 		// Create the NotificationInstance object
-		this->setupInstance(instances[i]->getName(), config);
+		if (this->setupInstance(instances[i]->getName(), config))
+		{
+			m_stats.loaded++;
+			m_stats.total++;
+		}
 	}
 }
 
@@ -809,12 +817,12 @@ string NotificationManager::getJSONDelivery()
 
 /**
  * Creates an empty, disabled notification category
- * within the Notifications parent.
+ * within the Notifications parent, via API call
  *
  * @param    name	The notification instance to create
  * @return		True on success, false otherwise
  */
-bool NotificationManager::createEmptyInstance(const string& name)
+bool NotificationManager::APIcreateEmptyInstance(const string& name)
 {
 	bool ret = false;
 
@@ -855,6 +863,9 @@ bool NotificationManager::createEmptyInstance(const string& name)
 							    children);
 			// Register category for configuration updates
 			m_service->registerCategory(name);
+
+			m_stats.created++;
+			m_stats.total++;
 
 			// Success
 			ret = true;
@@ -1439,4 +1450,17 @@ bool NotificationManager::getConfigurationItems(const ConfigCategory& config,
 	}
 
 	return true;
+}
+
+/**
+ * Audit log entry for sent notification
+ *
+ * @param       notificationName	The notification just delivered
+ * @return				True on success, false otherwise
+ */
+bool NotificationManager::auditNotification(const string& notificationName)
+{
+	return m_managerClient->addAuditEntry("NTFSN",
+					      "INFORMATION",
+					      "{\"name\": \"" + notificationName + "\"}");
 }
