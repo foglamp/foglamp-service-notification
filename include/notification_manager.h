@@ -15,6 +15,7 @@
 #include <rule_plugin.h>
 #include <delivery_plugin.h>
 #include <notification_service.h>
+#include <notification_stats.h>
 
 // Notification type repeat frequency
 #define DEFAULT_RETRIGGER_FREQUENCY 60
@@ -229,7 +230,7 @@ class NotificationManager
 		NOTIFICATION_TYPE	parseType(const std::string& type);
 		std::string		getJSONRules();
 		std::string		getJSONDelivery();
-		bool			createEmptyInstance(const std::string& name);
+		bool			APIcreateEmptyInstance(const std::string& name);
 		RulePlugin*		createRuleCategory(const std::string& name,
 							   const std::string& rule);
 		 DeliveryPlugin*	createDeliveryCategory(const std::string& name,
@@ -248,6 +249,8 @@ class NotificationManager
 							      std::string& deliveryPluginName,
 							      NOTIFICATION_TYPE& type,
 							      std::string& customText);
+		bool			auditNotification(const std::string& notification);
+		void			updateSentStats() { m_stats.sent++; };
 
 	private:
 		PLUGIN_HANDLE		loadRulePlugin(const std::string& rulePluginName);
@@ -275,5 +278,6 @@ class NotificationManager
 		NotificationService*	m_service;
 		Logger*			m_logger;
 		std::mutex		m_instancesMutex;
+		NotificationStats	m_stats;
 };
 #endif
