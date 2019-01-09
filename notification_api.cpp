@@ -121,6 +121,18 @@ void notificationCreateNotificationDelivery(shared_ptr<HttpServer::Response> res
 }
 
 /**
+ * Wrapper for DELETE /notification/{NotificationName}
+ */
+void notificationDeleteNotification(shared_ptr<HttpServer::Response> response,
+				    shared_ptr<HttpServer::Request> request)
+{
+	NotificationApi* api = NotificationApi::getInstance();
+	api->getNotificationObject(NotificationApi::ObjDeleteNotification,
+				   response,
+				   request);
+}
+
+/**
  * Construct the singleton Notification API
  *
  * @param    port	Listening port (0 = automatically set)
@@ -228,6 +240,7 @@ void NotificationApi::initResources()
 	m_server->resource[POST_NOTIFICATION_NAME]["POST"] = notificationCreateNotification;
 	m_server->resource[POST_NOTIFICATION_RULE_NAME]["POST"] = notificationCreateNotificationRule;
 	m_server->resource[POST_NOTIFICATION_DELIVERY_NAME]["POST"] = notificationCreateNotificationDelivery;
+	m_server->resource[POST_NOTIFICATION_NAME]["DELETE"] = notificationDeleteNotification;
 }
 
 /**
@@ -432,6 +445,15 @@ void NotificationApi::getNotificationObject(NOTIFICATION_OBJECT object,
 						  "{\"error\": \"create delivery failure\"}";;
 			}
 			break;
+		case ObjDeleteNotification:
+			{
+				string name = request->path_match[NOTIFICATION_NAME_COMPONENT];
+				bool ret = this->removeNotification(name);
+				responsePayload = ret ?
+						  "{\"message\": \"deleted\"}" :
+						  "{\"error\": \"delete notification failure\"}";
+			}
+			break;
 
 		default:
 			responsePayload = "{ \"error\": \"Unknown Notification object requested.\" }";
@@ -532,5 +554,25 @@ bool NotificationApi::createNotificationDelivery(const string& name,
 		delete deliveryPlugin;
 	}
 
+	return ret;
+}
+
+/**
+ * Remove a notification instance
+ *
+ * @param    name		The Notification category to remove
+ * @return			True on success, false otherwise
+ */
+bool NotificationApi::removeNotification(const string& name)
+{
+
+	bool ret = false;
+
+	// Get NotificationManager instance
+	NotificationManager* manager = NotificationManager::getInstance();
+	if (manager)
+	{
+		ret = manager->removeInstance(name);
+	}
 	return ret;
 }
