@@ -572,7 +572,7 @@ bool NotificationApi::removeNotification(const string& name)
 	NotificationManager* manager = NotificationManager::getInstance();
 	if (manager)
 	{
-		ret = manager->removeInstance(name);
+		ret = manager->APIdeleteInstance(name);
 	}
 	return ret;
 }
