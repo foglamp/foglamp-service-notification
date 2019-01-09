@@ -28,11 +28,11 @@ class NotificationStats : public JSONProvider {
 		{
 			std::ostringstream convert;
 
-			convert << "{ \"sentNotifications\" : " << sent << ",";
-			convert << "{ \"loadedInstances\" : " << loaded << ",";
-			convert << " \"createdInstances\" : " << created << ",";
-			convert << " \"removedInstances\" : " << removed << ",";
-			convert << " \"totalInstances\" : " << total << " }";
+			convert << "{ \"sentNotifications\" : " << sent << ", ";
+			convert << "\"loadedInstances\" : " << loaded << ", ";
+			convert << "\"createdInstances\" : " << created << ", ";
+			convert << "\"removedInstances\" : " << removed << ", ";
+			convert << "\"totalInstances\" : " << total << " }";
 
 			json = convert.str();
 		};
