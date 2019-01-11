@@ -25,7 +25,7 @@ service_type="services"
 service_name="notification"
 service_install_dirname=${service_name}
 usage="$(basename "$0") [help|clean|cleanall]
-This script is used to create the Debian package of FoglAMP C++ '${service_name}' ${service_type} service
+This script is used to create the Debian package of FoglAMP C++ '${service_name}' service
 Arguments:
  help     - Display this help text
  clean    - Remove all the old versions saved in format .XXXX
@@ -140,8 +140,8 @@ sed -i "s/Depends: foglamp/Depends: foglamp (${foglamp_version})/g" DEBIAN/contr
 
 mkdir -p usr/local/foglamp
 cd usr/local/foglamp
-mkdir -p services
-cp "${GIT_ROOT}/build/foglamp.${service_type}.${service_name}" "services/foglamp.${service_type}.${service_name}"
+mkdir -p "${service_type}"
+cp "${GIT_ROOT}/build/foglamp.${service_type}.${service_name}" "${service_type}/foglamp.${service_type}.${service_name}"
 echo "Done."
 
 # Build the package
