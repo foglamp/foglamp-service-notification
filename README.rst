@@ -28,7 +28,7 @@ this default behaviour:
 - **FOGLAMP_SRC** sets the path of a FogLAMP source tree
 - **FOGLAMP_INCLUDE** sets the path to FogLAMP header files
 - **FOGLAMP_LIB sets** the path to FogLAMP libraries
-- **FOGLAMP_INSTALL** sets the installation path of Random plugin
+- **FOGLAMP_INSTALL** sets the installation path of Notification service
 
 NOTE:
  - The **FOGLAMP_INCLUDE** option should point to a location where all the FogLAMP 

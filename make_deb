@@ -81,7 +81,7 @@ foglamp_version=`cat ${GIT_ROOT}/foglamp.version | tr -d ' ' | grep 'foglamp_ver
 BUILD_ROOT="${GIT_ROOT}/packages/build"
 
 # Final package name
-package_name="foglamp-${service_type}-${service_name}-${service_version}-${architecture}"
+package_name="foglamp-service-${service_name}-${service_version}-${architecture}"
 
 # Print the summary of findings
 echo "The package root directory is   : ${GIT_ROOT}"
