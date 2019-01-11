@@ -1,4 +1,4 @@
-Package: foglamp-service-notification
+Package: foglamp-services-notification
 Version: 1.0.0
 Section: devel
 Priority: optional

@@ -21,14 +21,14 @@
 ## @postinst DEBIAN/postinst
 ## This script is used to execute post installation tasks.
 ##
-## Author: Massimiliano Pinto, Amarendra K Sinha
+## Author: Amarendra K Sinha
 ##
 ##--------------------------------------------------------------------
 
 set -e
 
 set_files_ownership () {
-    chown -R root:root /usr/local/foglamp/plugins/service/notification
+    chown -R root:root "/usr/local/foglamp/services"
 }
 
 set_files_ownership

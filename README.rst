@@ -96,7 +96,7 @@ Finally, run the ``make_deb`` command:
 
    $ ./make_deb
    The package root directory is   : /home/ubuntu/source/foglamp-service-notification
-   The FogLAMP required version    : >=1.4.5
+   The FogLAMP required version    : >=1.5
    The package will be built in    : /home/ubuntu/source/foglamp-service-notification/packages/build
    The architecture is set as      : x86_64
    The package name is             : foglamp-service-notification-1.0.0-x86_64
