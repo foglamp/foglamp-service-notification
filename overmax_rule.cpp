@@ -68,8 +68,7 @@
 
 #define BUITIN_RULE_DESC "\"plugin\": {\"description\": \"The " RULE_NAME " notification rule plugin " \
 					"triggers a notification when reading data exceed an absolute limit value.\", " \
-				"\"type\": \"string\", \"default\": \"The " RULE_NAME " notification rule plugin " \
-					"triggers a notification when reading data exceed an absolute limit value.\", " \
+				"\"type\": \"string\", \"default\": \"" RULE_NAME "\", " \
 				"\"order\": \"7\", " \
 				"\"displayName\" : \"The " RULE_NAME " notification rule plugin " \
 					"triggers a notification when reading data exceed an absolute limit value.\", " \

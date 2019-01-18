@@ -908,6 +908,14 @@ RulePlugin* NotificationManager::createRuleCategory(const string& name,
 	DefaultConfigCategory ruleDefConfig(ruleCategoryName,
 					    rulePluginConfig);
 
+	// Unregister configuration changes	
+	m_managerClient->unregisterCategory(ruleCategoryName);
+
+	// Set new rule plugin name in "value"
+	m_managerClient->setCategoryItemValue(ruleCategoryName,
+					      "plugin",
+					      rule);	
+
 	// Create category, don't merge existing values
 	if (!m_managerClient->addCategory(ruleDefConfig, false))
 	{
@@ -973,6 +981,14 @@ DeliveryPlugin* NotificationManager::createDeliveryCategory(const string& name,
 
 	DefaultConfigCategory deliveryDefConfig(deliveryCategoryName,
 						deliveryPluginConfig);
+
+	// Unregister configuration changes	
+	m_managerClient->unregisterCategory(deliveryCategoryName);
+
+	// Set new delivery plugin name in "value"
+	m_managerClient->setCategoryItemValue(deliveryCategoryName,
+					      "plugin",
+					      delivery);	
 
 	// Create category, don't merge existing values
 	if (!m_managerClient->addCategory(deliveryDefConfig, false))
@@ -1094,7 +1110,8 @@ bool NotificationManager::setupInstance(const string& name,
 
 	// Load plugins and update categories and register configuration change interest
 	RulePlugin* rule = this->createRuleCategory(notificationName,
-						    rulePluginName) ;
+						    rulePluginName);
+
 	DeliveryPlugin* deliver = this->createDeliveryCategory(notificationName,
 						    deliveryPluginName);
 
@@ -1110,11 +1127,27 @@ bool NotificationManager::setupInstance(const string& name,
 		ConfigCategory ruleConfig = m_managerClient->getCategory(ruleCategoryName);
 		ConfigCategory deliveryConfig = m_managerClient->getCategory(deliveryCategoryName);
 
+		NotificationRule* theRule = NULL;
+		NotificationDelivery* theDelivery = NULL;
+
 		// Call rule "plugin_init" with configuration
-		rule->init(ruleConfig);
+		// and instantiate NotificationRule class
+		if (rule->init(ruleConfig))
+		{
+			theRule = new NotificationRule(ruleCategoryName,
+						       config.getName(),
+						       rule);
+		}
 
 		// Call delivery "plugin_init" with configuration
-		deliver->init(deliveryConfig);
+		// and instantiate  NotificationDelivery class
+		if (deliver->init(deliveryConfig))
+		{
+			theDelivery = new NotificationDelivery(deliveryCategoryName,
+								config.getName(),
+								deliver,
+								customText);
+		}
 
 		// Add plugin category name under service/process config name
 		vector<string> children;
@@ -1122,15 +1155,6 @@ bool NotificationManager::setupInstance(const string& name,
 		children.push_back(deliveryCategoryName);
 		m_managerClient->addChildCategories(config.getName(),
 						    children);
-
-		// Instantiate NotificationRule and NotificationDelivery classes
-		NotificationRule* theRule = new NotificationRule(ruleCategoryName,
-								 config.getName(),
-								 rule);
-		NotificationDelivery* theDelivery = new NotificationDelivery(deliveryCategoryName,
-									     config.getName(),
-									     deliver,
-									     customText);
 
 		// Add the new instance
 		this->addInstance(config.getName(),
