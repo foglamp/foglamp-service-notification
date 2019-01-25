@@ -911,11 +911,6 @@ RulePlugin* NotificationManager::createRuleCategory(const string& name,
 	// Unregister configuration changes	
 	m_managerClient->unregisterCategory(ruleCategoryName);
 
-	// Set new rule plugin name in "value"
-	m_managerClient->setCategoryItemValue(ruleCategoryName,
-					      "plugin",
-					      rule);	
-
 	// Create category, don't merge existing values
 	if (!m_managerClient->addCategory(ruleDefConfig, false))
 	{
@@ -927,6 +922,10 @@ RulePlugin* NotificationManager::createRuleCategory(const string& name,
 		return NULL;
 	}
 
+	// Set new rule plugin name in "value"
+	m_managerClient->setCategoryItemValue(ruleCategoryName,
+					      "plugin",
+					      rule);
 	try
 	{
 		// Add ruleCategoryName as child of Notification name
@@ -985,11 +984,6 @@ DeliveryPlugin* NotificationManager::createDeliveryCategory(const string& name,
 	// Unregister configuration changes	
 	m_managerClient->unregisterCategory(deliveryCategoryName);
 
-	// Set new delivery plugin name in "value"
-	m_managerClient->setCategoryItemValue(deliveryCategoryName,
-					      "plugin",
-					      delivery);	
-
 	// Create category, don't merge existing values
 	if (!m_managerClient->addCategory(deliveryDefConfig, false))
 	{
@@ -1000,6 +994,11 @@ DeliveryPlugin* NotificationManager::createDeliveryCategory(const string& name,
 		delete deliveryPlugin;
 		return NULL;
 	}
+
+	// Set new delivery plugin name in "value"
+	m_managerClient->setCategoryItemValue(deliveryCategoryName,
+					      "plugin",
+					      delivery);
 
 	try
 	{
