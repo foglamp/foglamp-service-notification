@@ -292,10 +292,6 @@ void NotificationQueue::processDataSet(NotificationQueueElement* data)
 		// (2) process all data in all rule buffers for given assetName
 		this->processAllDataBuffers(data->getAssetName());
 	}
-	else
-	{
-		delete data;
-	}
 }
 
 /**
@@ -314,6 +310,10 @@ bool NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 
 	// Get all subscriptions related the asetName
 	NotificationSubscription* subscriptions = NotificationSubscription::getInstance();
+	if (!subscriptions)
+	{
+		return false;
+	}
 	subscriptions->lockSubscriptions();
 	std::vector<SubscriptionElement>&
 		subscriptionItems = subscriptions->getSubscription(assetName);
@@ -474,8 +474,8 @@ bool NotificationQueue::processDataBuffer(map<string, string>& results,
 					  NotificationDetail& info)
 {
 #ifdef QUEUE_DEBUG_DATA
-	assert(assetName.compare(element.getAssetName()) == 0);
-	assert(ruleName.compare(element.getRuleName()) == 0);
+	assert(assetName.compare(info.getAssetName()) == 0);
+	assert(ruleName.compare(info.getRuleName()) == 0);
 #endif
 
 	m_bufferMutex.lock();
