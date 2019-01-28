@@ -208,7 +208,10 @@ NotificationManager::NotificationManager(const std::string& serviceName,
 
 	// Register statistics
 	ManagementApi *management = ManagementApi::getInstance();
-	management->registerStats(&m_stats);
+	if (management)
+	{
+		management->registerStats(&m_stats);
+	}
 }
 
 /**
@@ -241,8 +244,17 @@ NotificationManager* NotificationManager::getInstance()
  */
 void NotificationManager::loadInstances()
 {
+	ConfigCategories instances;;
 	// Get child categories of "Notifications"
-	ConfigCategories instances = m_managerClient->getChildCategories("Notifications");
+	try
+	{
+		instances = m_managerClient->getChildCategories("Notifications");
+	}
+	catch (...)
+	{
+		// Non blocking error
+		return;
+	}
 
 	for (int i = 0; i < instances.length(); i++)
 	{
