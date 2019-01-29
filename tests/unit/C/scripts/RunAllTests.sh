@@ -8,7 +8,7 @@ exitstate=0
 # Set here location of FogLAMP source code
 # or leave it empty and set FogLAMP includes and FogLAMP libs
 
-FOGLAMP_SRC="/home/ubuntu/source/develop/FogLAMP" 
+FOGLAMP_SRC="/home/ubuntu/source/FogLAMP" 
 # NOTE: FogLAMP libraries come from FOGLAMP_SRC/cmake_build/C/lib
 
 # If not set ...
@@ -35,7 +35,7 @@ for f in $cmakefile; do
 		mkdir build;
 		cd build;
 		echo Building Tests...;
-		cmake -DFOGLAMP_SRC="${FOGLAMP_SRC}" ..;
+		cmake -DFOGLAMP_SRC="${FOGLAMP_SRC}" -DFOGLAMP_INCLUDE="${FOGLAMP_INCLUDE_DIRS}" -DFOGLAMP_LIB="${FOGLAMP_LIB_DIRS}" ..;
 		rc=$?
 		if [ $rc != 0 ]; then
 			echo cmake failed for $dir;
