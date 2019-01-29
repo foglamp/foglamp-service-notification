@@ -150,6 +150,11 @@ void NotificationQueue::stop()
 
 	// Get the subscriptions instance
 	NotificationSubscription* subscriptions = NotificationSubscription::getInstance();
+	if (!subscriptions)
+	{
+		return;
+	}
+
 	// NOTE:
 	//
 	// Notificatiion API server is down: we cannot receive any configuration change
