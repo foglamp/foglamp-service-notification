@@ -78,6 +78,9 @@ class NotificationApi
 				getCallBackURL() const { return m_callBackURL; };
 		void		setCallBackURL();
 		bool		removeNotification(const std::string& notificationName);
+		// Add asset name and data to the Readings process queue
+		bool		queueNotification(const string& assetName,
+						  const string& payload);
 
 	private:
 		void		internalError(shared_ptr<HttpServer::Response>,
@@ -87,9 +90,6 @@ class NotificationApi
 		void		respond(shared_ptr<HttpServer::Response>,
 					SimpleWeb::StatusCode,
 				const string&);
-		// Add asset name and data to the Readings process queue
-		bool		queueNotification(const string& assetName,
-						  const string& payload);
 
 	private:
 		static NotificationApi*		m_instance;
