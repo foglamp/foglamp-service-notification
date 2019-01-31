@@ -244,29 +244,27 @@ NotificationManager* NotificationManager::getInstance()
  */
 void NotificationManager::loadInstances()
 {
-	ConfigCategories instances;;
-	// Get child categories of "Notifications"
 	try
 	{
-		instances = m_managerClient->getChildCategories("Notifications");
+		// Get child categories of "Notifications"
+		ConfigCategories instances = m_managerClient->getChildCategories("Notifications");
+		for (int i = 0; i < instances.length(); i++)
+		{
+			// Fetch instance configuration category
+			ConfigCategory config = m_managerClient->getCategory(instances[i]->getName());
+
+			// Create the NotificationInstance object
+			if (this->setupInstance(instances[i]->getName(), config))
+			{
+				m_stats.loaded++;
+				m_stats.total++;
+			}
+		}
 	}
 	catch (...)
 	{
 		// Non blocking error
 		return;
-	}
-
-	for (int i = 0; i < instances.length(); i++)
-	{
-		// Fetch instance configuration category
-		ConfigCategory config = m_managerClient->getCategory(instances[i]->getName());
-
-		// Create the NotificationInstance object
-		if (this->setupInstance(instances[i]->getName(), config))
-		{
-			m_stats.loaded++;
-			m_stats.total++;
-		}
 	}
 }
 
