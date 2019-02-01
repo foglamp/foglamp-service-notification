@@ -350,7 +350,7 @@ bool OverMaxRule::evalAsset(const Value& assetValue,
 			// Check configuration datapoint type
 			if ((*it)->getData().getType() == DatapointValue::T_FLOAT)
 			{
-				assetEval = checkLimit(point, (*it)->getData().toDouble());
+				assetEval = checkLimit(point, (*it)->getData().toInt());
 			}
 			else
 			{
@@ -406,7 +406,7 @@ void OverMaxRule::configure(const ConfigCategory& config)
 
 		if (config.itemExists("trigger_value"))
 		{
-			double maxVal = atof(config.getValue("trigger_value").c_str());
+			double maxVal = atol(config.getValue("trigger_value").c_str());
 			DatapointValue value(maxVal);
 			Datapoint* point = new Datapoint(dataPointName, value);
 			RuleTrigger* pTrigger = new RuleTrigger(dataPointName, point);
