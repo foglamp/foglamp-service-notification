@@ -80,12 +80,7 @@ class BuiltinRule
 		~BuiltinRule()
 		{
 			// Delete all triggers
-			for (auto r = m_triggers.begin();
-				  r != m_triggers.end();
-				  ++r)
-			{
-				delete (*r).second;
-			}
+			removeTriggers();
 		};
 
 		void		addTrigger(const std::string& asset,
@@ -94,6 +89,18 @@ class BuiltinRule
 			m_triggers.insert(std::pair<std::string,
 					  RuleTrigger *>(asset, trigger));
 		};
+		void		removeTriggers()
+				{
+					// Delete all triggers
+					for (auto r = m_triggers.begin();
+						  r != m_triggers.end();
+						  ++r)
+					{
+						delete (*r).second;
+					}
+
+					m_triggers.clear();
+				};
 
 		bool		hasTriggers() const { return m_triggers.size() != 0; };
 		std::map<std::string, RuleTrigger *>&
