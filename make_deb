@@ -140,7 +140,7 @@ sed -i "s/Depends: foglamp/Depends: foglamp (${foglamp_version})/g" DEBIAN/contr
 mkdir -p usr/local/foglamp
 cd usr/local/foglamp
 mkdir -p "${service_type}"
-cp "${GIT_ROOT}/build/foglamp.${service_type}.${service_name}" "${service_type}/foglamp.${service_type}.${service_name}"
+cp "${GIT_ROOT}/build/C/services/notification/foglamp.${service_type}.${service_name}" "${service_type}/foglamp.${service_type}.${service_name}"
 echo "Done."
 
 # Build the package
