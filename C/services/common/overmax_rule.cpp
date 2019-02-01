@@ -417,6 +417,10 @@ void OverMaxRule::configure(const ConfigCategory& config)
 			// Configuration change is protected by a lock
 			lock_guard<mutex> guard(m_configMutex);
 
+			if (handle->hasTriggers())
+			{
+				handle->removeTriggers();
+			}
 			handle->addTrigger(assetName, pTrigger);
 		}
 		else
