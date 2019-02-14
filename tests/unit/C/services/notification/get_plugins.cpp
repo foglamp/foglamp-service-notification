@@ -41,7 +41,6 @@ TEST(NotificationService, GetPlugins)
 			closedir(dir);
 		}
 
-		cerr << instances.getJSONDelivery() << endl;
 		if (pluginsFound)
 		{
 			// Check array is NOT empty
