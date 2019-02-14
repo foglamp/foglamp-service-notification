@@ -2,6 +2,7 @@
 #include "notification_service.h"
 #include "notification_manager.h"
 #include "notification_queue.h"
+#include <dirent.h>
 
 using namespace std;
 
@@ -22,8 +23,34 @@ TEST(NotificationService, GetPlugins)
 	}
 	else
 	{
-		// NOTE: Test fails if no delivery plugin have been installed
-		ASSERT_TRUE(instances.getJSONDelivery().compare("{}") != 0);
+		string deliveryPluginDir(getenv("FOGLAMP_ROOT"));
+		deliveryPluginDir += "/plugins/notificationDelivery";
+		DIR* dir = opendir(deliveryPluginDir.c_str());
+		bool pluginsFound = false;
+		if (dir)
+		{
+			struct dirent *entry;
+			while ((entry = readdir(dir)))
+			{
+				if (strcmp (entry->d_name, "..") != 0 &&
+				    strcmp (entry->d_name, ".") != 0)
+				{
+					pluginsFound = true;
+				}
+			}
+			closedir(dir);
+		}
+
+		if (pluginsFound)
+		{
+			// Check array is NOT empty
+			ASSERT_TRUE(instances.getJSONDelivery().compare("[]") != 0);
+		}
+		else
+		{
+			// Check array must be empty
+			ASSERT_TRUE(instances.getJSONDelivery().compare("[]") == 0);
+		}
 	}
 
 	delete managerClient;

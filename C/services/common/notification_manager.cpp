@@ -801,7 +801,7 @@ string NotificationManager::getJSONDelivery()
 
 	if (!pList.size())
 	{
-		return "{}";
+		return "[]";
 	}
 
 	ret = "[";
