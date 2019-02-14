@@ -5,10 +5,10 @@
 #
 exitstate=0
 
-# Set here location of FogLAMP source code
-# or leave it empty and set FogLAMP includes and FogLAMP libs
+# Set here location of FogLAMP source code:
+# if FOGLAMP_ROOT is not set then use FogLAMP includes and FogLAMP libs
 
-FOGLAMP_SRC="/home/ubuntu/source/FogLAMP" 
+FOGLAMP_SRC="${FOGLAMP_ROOT}"
 # NOTE: FogLAMP libraries come from FOGLAMP_SRC/cmake_build/C/lib
 
 # If not set ...
