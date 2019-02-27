@@ -21,6 +21,7 @@
 #include <string.h>
 #include "plugin_api.h"
 #include <overmax_rule.h>
+#include <undermin_rule.h>
 #include <notification_subscription.h>
 #include <notification_queue.h>
 
@@ -205,6 +206,7 @@ NotificationManager::NotificationManager(const std::string& serviceName,
 	 * Add here all the builtin rules we want to make available:
 	 */
 	this->registerBuiltinRule<OverMaxRule>("OverMaxRule");
+	this->registerBuiltinRule<UnderMinRule>("UnderMinRule");
 
 	// Register statistics
 	ManagementApi *management = ManagementApi::getInstance();
