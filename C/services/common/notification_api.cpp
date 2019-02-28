@@ -133,6 +133,28 @@ void notificationDeleteNotification(shared_ptr<HttpServer::Response> response,
 }
 
 /**
+ * Wrapper for not handled URLS
+ */
+void defaultWrapper(shared_ptr<HttpServer::Response> response,
+		    shared_ptr<HttpServer::Request> request)
+{
+	NotificationApi *api = NotificationApi::getInstance();
+	api->defaultResource(response, request);
+}
+
+/**
+ * Handle a bad URL endpoint call
+ */
+void NotificationApi::defaultResource(shared_ptr<HttpServer::Response> response,
+				      shared_ptr<HttpServer::Request> request)
+{
+	string payload("{ \"error\" : \"Unsupported URL: " + request->path + "\" }");
+	respond(response,
+		SimpleWeb::StatusCode::client_error_bad_request,
+		payload);
+}
+
+/**
  * Construct the singleton Notification API
  *
  * @param    port	Listening port (0 = automatically set)
@@ -241,6 +263,11 @@ void NotificationApi::initResources()
 	m_server->resource[POST_NOTIFICATION_RULE_NAME]["POST"] = notificationCreateNotificationRule;
 	m_server->resource[POST_NOTIFICATION_DELIVERY_NAME]["POST"] = notificationCreateNotificationDelivery;
 	m_server->resource[POST_NOTIFICATION_NAME]["DELETE"] = notificationDeleteNotification;
+
+	// Handle errors
+	m_server->default_resource["GET"] = defaultWrapper;
+	m_server->default_resource["POST"] = defaultWrapper;
+	m_server->default_resource["DELETE"] = defaultWrapper;
 }
 
 /**
