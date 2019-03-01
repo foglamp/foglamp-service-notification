@@ -444,7 +444,7 @@ void NotificationApi::getNotificationObject(NOTIFICATION_OBJECT object,
 		case ObjCreateNotification:
 			{
 				string name = request->path_match[NOTIFICATION_NAME_COMPONENT];
-				bool ret = this->createNotification(name);
+				bool ret = this->createNotification(decodeName(name));
 				responsePayload = ret ?
 						  "{\"message\": \"created\"}" :
 						  "{\"error\": \"create notification failure\"}";
@@ -455,7 +455,7 @@ void NotificationApi::getNotificationObject(NOTIFICATION_OBJECT object,
 			{
 				string name = request->path_match[NOTIFICATION_NAME_COMPONENT];
 				string rule = request->path_match[RULE_NAME_COMPONENT];
-				bool ret = this->createNotificationRule(name, rule);
+				bool ret = this->createNotificationRule(decodeName(name), rule);
 				responsePayload = ret ?
 						 "{\"message\": \"created\"}" :
 						 "{\"error\": \"create rule failure\"}";
@@ -466,7 +466,7 @@ void NotificationApi::getNotificationObject(NOTIFICATION_OBJECT object,
 			{
 				string name = request->path_match[NOTIFICATION_NAME_COMPONENT];
 				string delivery = request->path_match[DELIVERY_NAME_COMPONENT];
-				bool ret = this->createNotificationDelivery(name, delivery);
+				bool ret = this->createNotificationDelivery(decodeName(name), delivery);
 				responsePayload = ret ?
 						 "{\"message\": \"created\"}" :
 						  "{\"error\": \"create delivery failure\"}";;
@@ -475,7 +475,7 @@ void NotificationApi::getNotificationObject(NOTIFICATION_OBJECT object,
 		case ObjDeleteNotification:
 			{
 				string name = request->path_match[NOTIFICATION_NAME_COMPONENT];
-				bool ret = this->removeNotification(name);
+				bool ret = this->removeNotification(decodeName(name));
 				responsePayload = ret ?
 						  "{\"message\": \"deleted\"}" :
 						  "{\"error\": \"delete notification failure\"}";

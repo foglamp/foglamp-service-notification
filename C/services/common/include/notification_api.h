@@ -23,9 +23,9 @@ using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 #define GET_NOTIFICATION_INSTANCES	"^/notification$"
 #define GET_NOTIFICATION_DELIVERY	"^/notification/delivery$"
 #define GET_NOTIFICATION_RULES		"^/notification/rules$"
-#define POST_NOTIFICATION_NAME		"^/notification/([A-Za-z][a-zA-Z0-9_]*)$"
-#define POST_NOTIFICATION_RULE_NAME	"^/notification/([A-Za-z][a-zA-Z0-9_]*)/rule/([A-Za-z][a-zA-Z0-9_]*)$"
-#define POST_NOTIFICATION_DELIVERY_NAME	"^/notification/([A-Za-z][a-zA-Z0-9_]*)/delivery/([A-Za-z][a-zA-Z0-9_]*)$"
+#define POST_NOTIFICATION_NAME		"^/notification/([A-Za-z][a-zA-Z0-9_%]*)$"
+#define POST_NOTIFICATION_RULE_NAME	"^/notification/([A-Za-z][a-zA-Z0-9_%]*)/rule/([A-Za-z][a-zA-Z0-9_]*)$"
+#define POST_NOTIFICATION_DELIVERY_NAME	"^/notification/([A-Za-z][a-zA-Z0-9_%]*)/delivery/([A-Za-z][a-zA-Z0-9_]*)$"
 #define ASSET_NAME_COMPONENT		1
 #define NOTIFICATION_NAME_COMPONENT	1
 #define RULE_NAME_COMPONENT		2
@@ -81,6 +81,19 @@ class NotificationApi
 		// Add asset name and data to the Readings process queue
 		bool		queueNotification(const string& assetName,
 						  const string& payload);
+
+		void		defaultResource(shared_ptr<HttpServer::Response> response,
+                                        shared_ptr<HttpServer::Request> request);
+		std::string	decodeName(const std::string& name)
+				{
+					std::string decoded(name);
+					std::size_t pos = decoded.find("%20");
+					if (pos != std::string::npos)
+					{
+						decoded.replace(pos, 3, 1, ' ');
+					}
+					return decoded;
+				};
 
 	private:
 		void		internalError(shared_ptr<HttpServer::Response>,
