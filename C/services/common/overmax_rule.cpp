@@ -25,9 +25,7 @@
 				"\"default\": \"Generate a notification if the value " \
 					"of a configured datapoint within an asset name " \
 					"exceeds a configured value.\", " \
-				"\"displayName\" : \"Generate a notification if the value " \
-					"of a configured datapoint within an asset name " \
-					"exceeds a configured value.\", " \
+				"\"displayName\" : \"Generate a notification for configured asset name and datapoint value\", " \
 				"\"order\": \"1\" }, " \
 			"\"asset\" : { " \
 				"\"description\": \"The asset name for which " \
@@ -41,8 +39,7 @@
 					"for which notifications will be generated.\", " \
 				"\"type\": \"string\", " \
 				"\"default\": \"\", " \
-				"\"displayName\" : \"The datapoint within the asset name " \
-					"for which notifications will be generated.\", " \
+				"\"displayName\" : \"The datapoint within the asset name\", " \
 				"\"order\": \"3\" }, " \
 			"\"evaluation_type\": {" \
 				"\"description\": \"The rule evaluation type\", " \
@@ -57,7 +54,7 @@
 				"\"type\": \"integer\" , " \
 				"\"default\": \"" DEFAULT_TIME_INTERVAL "\", " \
 				"\"displayName\" : \"Duration of the time window, in seconds, " \
-					"for collecting data points except for 'latest' evaluation.\", " \
+					"for collecting data points\", " \
 				"\"order\": \"5\" }, " \
 			"\"trigger_value\" : { " \
 				"\"description\": \"Value at which to trigger a notification.\", " \
