@@ -25,24 +25,21 @@
 				"\"default\": \"Generate a notification if the value " \
 					"of a configured datapoint within an asset name " \
 					"exceeds a configured value.\", " \
-				"\"displayName\" : \"Generate a notification if the value " \
-					"of a configured datapoint within an asset name " \
-					"exceeds a configured value.\", " \
+				"\"displayName\" : \"Rule\", " \
 				"\"order\": \"1\" }, " \
 			"\"asset\" : { " \
 				"\"description\": \"The asset name for which " \
 					"notifications will be generated.\", " \
 				"\"type\": \"string\", " \
 				"\"default\": \"\", " \
-				"\"displayName\" : \"The asset name for which notifications will be generated.\", " \
+				"\"displayName\" : \"Asset name\", " \
 				"\"order\": \"2\" }, " \
 			"\"datapoint\" : { " \
 				"\"description\": \"The datapoint within the asset name " \
 					"for which notifications will be generated.\", " \
 				"\"type\": \"string\", " \
 				"\"default\": \"\", " \
-				"\"displayName\" : \"The datapoint within the asset name " \
-					"for which notifications will be generated.\", " \
+				"\"displayName\" : \"Datapoint name\", " \
 				"\"order\": \"3\" }, " \
 			"\"evaluation_type\": {" \
 				"\"description\": \"The rule evaluation type\", " \
@@ -50,20 +47,19 @@
 					"\"options\": [ " \
 					"\"window\", \"maximum\", \"minimum\", \"average\", \"latest\" ], " \
 				"\"default\" : \"latest\", " \
-				"\"displayName\" : \"The rule evaluation type.\", \"order\": \"4\" }, " \
+				"\"displayName\" : \"Evaluation type\", \"order\": \"4\" }, " \
 			"\"time_window\" : { " \
 				"\"description\": \"Duration of the time window, in seconds, " \
 					"for collecting data points except for 'latest' evaluation.\", " \
 				"\"type\": \"integer\" , " \
 				"\"default\": \"" DEFAULT_TIME_INTERVAL "\", " \
-				"\"displayName\" : \"Duration of the time window, in seconds, " \
-					"for collecting data points except for 'latest' evaluation.\", " \
+				"\"displayName\" : \"Time window\", " \
 				"\"order\": \"5\" }, " \
 			"\"trigger_value\" : { " \
 				"\"description\": \"Value at which to trigger a notification.\", " \
 				"\"type\": \"float\" , " \
 				"\"default\": \"0.0\", " \
-				"\"displayName\" : \"Value at which to trigger a notification.\", " \
+				"\"displayName\" : \"Trigger value\", " \
 				"\"order\": \"6\" }"
 
 #define BUITIN_RULE_DESC "\"plugin\": {\"description\": \"The " RULE_NAME " notification rule plugin " \
