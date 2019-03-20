@@ -131,6 +131,19 @@ bool NotificationService::start(string& coreAddress,
 		return false;
 	}
 
+	// Create a category with given Notification server m_name
+	DefaultConfigCategory notificationServerConfig(m_name, string("{}"));
+	notificationServerConfig.setDescription("Notification server " + m_name);
+	if (!m_managerClient->addCategory(notificationServerConfig, true))
+	{
+		m_logger->fatal("Notification service '" + m_name + \
+				"' can not connect to FogLAMP ConfigurationManager at " + \
+				string(coreAddress + ":" + to_string(corePort)));
+
+		this->cleanupResources();
+		return false;
+	}
+
 	// Register this notification service with FogLAMP core
 	unsigned short listenerPort = m_api->getListenerPort();
 	unsigned short managementListener = m_managementApi->getListenerPort();
