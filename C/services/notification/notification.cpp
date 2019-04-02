@@ -23,6 +23,7 @@
 #include <notification_manager.h>
 #include <notification_subscription.h>
 #include <notification_queue.h>
+#include <syslog.h>
 
 extern int makeDaemon(void);
 
@@ -55,6 +56,7 @@ int main(int argc, char *argv[])
 	string	       coreAddress = "localhost";
 	bool	       daemonMode = true;
 	string	       myName = SERVICE_NAME;
+	string	       logLevel = "warning";
 
 	for (int i = 1; i < argc; i++)
 	{
@@ -73,6 +75,10 @@ int main(int argc, char *argv[])
 		else if (!strncmp(argv[i], "--address=", 10))
 		{
 			coreAddress = &argv[i][10];
+		}
+		else if (!strncmp(argv[i], "--logLevel=", 11))
+		{
+			logLevel = &argv[i][11];
 		}
 	}
 
@@ -94,6 +100,7 @@ int main(int argc, char *argv[])
 
 	// Instantiate the NotificationService class
 	service = new NotificationService(myName);
+	Logger::getLogger()->setMinLevel(logLevel);
 
 	// Start the Notification service
 	service->start(coreAddress, corePort);
@@ -117,6 +124,7 @@ int makeDaemon()
 {
 	pid_t pid;
 
+	int logmask = setlogmask(0);
 	/* create new process */
 	if ((pid = fork()  ) == -1)
 	{
@@ -134,6 +142,7 @@ int makeDaemon()
 	{
 		return -1;  
 	}
+	setlogmask(logmask);
 
 	// Close stdin, stdout and stderr
 	close(0);
