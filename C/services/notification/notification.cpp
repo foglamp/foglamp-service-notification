@@ -24,8 +24,12 @@
 #include <notification_subscription.h>
 #include <notification_queue.h>
 #include <syslog.h>
+#include <execinfo.h>
+#include <dlfcn.h>
+#include <cxxabi.h>   // for __cxa_demangle
 
 extern int makeDaemon(void);
+extern void handler(int sig);
 
 using namespace std;
 
@@ -57,6 +61,12 @@ int main(int argc, char *argv[])
 	bool	       daemonMode = true;
 	string	       myName = SERVICE_NAME;
 	string	       logLevel = "warning";
+
+	signal(SIGSEGV, handler);
+	signal(SIGILL, handler);
+	signal(SIGBUS, handler);
+	signal(SIGFPE, handler);
+	signal(SIGABRT, handler);
 
 	for (int i = 1; i < argc; i++)
 	{
@@ -155,3 +165,50 @@ int makeDaemon()
 
  	return 0;
 }
+
+/**
+ * Handler to print a stack trace to the syslog
+ *
+ * @param sig The signal that caused the problem
+ */
+void handler(int sig)
+{
+Logger	*logger = Logger::getLogger();
+void	*array[20];
+char	buf[1024];
+int	size;
+
+	// get void*'s for all entries on the stack
+	size = backtrace(array, 20);
+
+	// print out all the frames to stderr
+	logger->fatal("Signal %d (%s) trapped:\n", sig, strsignal(sig));
+	char **messages = backtrace_symbols(array, size);
+	for (int i = 0; i < size; i++)
+	{
+		Dl_info info;
+		if (dladdr(array[i], &info) && info.dli_sname)
+		{
+		    char *demangled = NULL;
+		    int status = -1;
+		    if (info.dli_sname[0] == '_')
+		        demangled = abi::__cxa_demangle(info.dli_sname, NULL, 0, &status);
+		    snprintf(buf, sizeof(buf), "%-3d %*p %s + %zd---------",
+		             i, int(2 + sizeof(void*) * 2), array[i],
+		             status == 0 ? demangled :
+		             info.dli_sname == 0 ? messages[i] : info.dli_sname,
+		             (char *)array[i] - (char *)info.dli_saddr);
+		    free(demangled);
+		} 
+		else
+		{
+		    snprintf(buf, sizeof(buf), "%-3d %*p %s---------",
+		             i, int(2 + sizeof(void*) * 2), array[i], messages[i]);
+		}
+		logger->fatal("(%d) %s", i, buf);
+	}
+	free(messages);
+	exit(1);
+}
+
+

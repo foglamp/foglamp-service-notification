@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.6.0)
 # Set the plugin name to build
 project("Notification server")
 set(EXEC foglamp.services.notification)
+set(DLLIB -ldl)
 
 # Supported options:
 # -DFOGLAMP_INCLUDE
