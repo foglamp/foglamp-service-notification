@@ -1511,6 +1511,32 @@ bool NotificationManager::auditNotification(const string& notificationName)
  */
 bool NotificationManager::APIdeleteInstance(const string& instanceName)
 {
+	NotificationManager* notifications = NotificationManager::getInstance();
+	NotificationInstance* instance = NULL;
+
+	notifications->lockInstances();
+	instance = notifications->getNotificationInstance(instanceName);
+	notifications->unlockInstances();
+
+	if (instance)
+	{
+		NotificationSubscription* subscriptions = NotificationSubscription::getInstance();
+		string ruleName = instance->getRule()->getName();
+		// Get all assets for this rule
+		std::vector<NotificationDetail>& assets = instance->getRule()->getAssets();
+
+		// Unregister current subscriptions for this rule and
+		// clean all current rule/asset buffers
+		// remove all assets from the rule
+		for (auto a = assets.begin();
+		     a != assets.end(); )
+		{
+			subscriptions->removeSubscription((*a).getAssetName(),
+							   ruleName);
+			// Remove asseet
+			assets.erase(a);
+		}
+	}
 
 	bool ret = this->removeInstance(instanceName);
 
