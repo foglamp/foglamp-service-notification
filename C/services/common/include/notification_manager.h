@@ -252,6 +252,10 @@ class NotificationManager
 		bool			auditNotification(const std::string& notification);
 		bool			APIdeleteInstance(const string& instanceName);
 		void			updateSentStats() { m_stats.sent++; };
+		void			ingestReading(Reading *reading)
+					{
+
+					};
 
 	private:
 		PLUGIN_HANDLE		loadRulePlugin(const std::string& rulePluginName);
