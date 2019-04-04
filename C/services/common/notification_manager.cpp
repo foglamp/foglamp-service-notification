@@ -840,6 +840,7 @@ bool NotificationManager::APIcreateEmptyInstance(const string& name)
 
 	// Create an empty Notification category
 	string payload = "{\"name\" : {\"description\" : \"The name of this notification\", "
+			 "\"readonly\": \"true\", "
 			 "\"type\" : \"string\", \"default\": \"Notification " + name + "\"}, ";
 	payload += "\"description\" :{\"description\" : \"Description of this notification\", "
 			 "\"type\": \"string\", \"default\": \"\"}, "
