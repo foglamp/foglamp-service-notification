@@ -611,20 +611,27 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 				string reason = (*it).getRule()->getPlugin()->reason();
 
 				DeliveryPlugin* plugin = instance->getDeliveryPlugin();
-				string customText = instance->getDelivery()->getText();
+				if (!instance->getDelivery())
+				{
+					Logger::getLogger()->error("Aborting delivery for notification %s", instance->getName().c_str());
+				}
+				else
+				{
+					string customText = instance->getDelivery()->getText();
 
-				bool retCode = plugin->deliver(instance->getDelivery()->getName(),
-							       instance->getDelivery()->getNotificationName(),
-							       reason,
-							       (customText.empty() ?
-								"ALERT for " + ruleName :
-								instance->getDelivery()->getText()));
+					bool retCode = plugin->deliver(instance->getDelivery()->getName(),
+								       instance->getDelivery()->getNotificationName(),
+								       reason,
+								       (customText.empty() ?
+									"ALERT for " + ruleName :
+									instance->getDelivery()->getText()));
 
-				// Audit log
-				NotificationManager* instances = NotificationManager::getInstance();
-				instances->auditNotification(instance->getName());
-				// Update sent notification statistics
-				instances->updateSentStats();
+					// Audit log
+					NotificationManager* instances = NotificationManager::getInstance();
+					instances->auditNotification(instance->getName());
+					// Update sent notification statistics
+					instances->updateSentStats();
+				}
 			}
 		}
 	}

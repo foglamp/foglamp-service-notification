@@ -299,6 +299,8 @@ bool NotificationSubscription::createSubscription(NotificationInstance* instance
 				       rulePluginInstance->getName().c_str());
 			return false;
 		}
+		m_logger->info("Triggers set for %s plugin",
+				       rulePluginInstance->getName().c_str());
 
 		string ruleName = instance->getRule()->getName();
 		for (Value::ConstValueIterator itr = triggers.Begin();
