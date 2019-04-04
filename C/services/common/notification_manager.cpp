@@ -293,16 +293,6 @@ void NotificationManager::addInstance(const string& instanceName,
 	}
 	else
 	{
-		if (!rule)
-		{
-			Logger::getLogger()->error("Aborting adding instance %s as there is no rule", instanceName.c_str());
-			return;
-		}
-		if (!delivery)
-		{
-			Logger::getLogger()->error("Aborting adding instance %s as there is no delivery channel", instanceName.c_str());
-			return;
-		}
 		// Add it
 		NotificationInstance* instance = new NotificationInstance(instanceName,
 									  enabled,
