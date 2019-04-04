@@ -333,7 +333,8 @@ bool NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 
 		// Feed buffer[ruleName][theAsset] with Readings data
 		NotificationInstance* instance = (*it).getInstance();
-		if (instance->isEnabled())
+		if (instance &&
+		    instance->isEnabled())
 		{
 			ret = this->feedDataBuffer(ruleName,
 						   assetName,
@@ -607,13 +608,16 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 			{
 				// Get notification instance
 				NotificationInstance* instance = (*it).getInstance();
+
 				// Call rule "plugin_reason"
 				string reason = (*it).getRule()->getPlugin()->reason();
 
 				DeliveryPlugin* plugin = instance->getDeliveryPlugin();
-				if (!instance->getDelivery())
+				if (!instance ||
+				    !instance->getDelivery())
 				{
-					Logger::getLogger()->error("Aborting delivery for notification %s", instance->getName().c_str());
+					Logger::getLogger()->error("Aborting delivery for notification %s",
+								   (*it).getNotificationName().c_str());
 				}
 				else
 				{
@@ -829,12 +833,15 @@ bool NotificationQueue::sendNotification(map<string,string>& results,
 {
 	// Get notification instance
 	NotificationInstance* instance = subscription.getInstance();
+	if (instance)
+	{
+		// Eval notification data via ruel "plugin_eval"
+		bool eval = this->evalRule(results, subscription.getRule());
 
-	// Eval notification data via ruel "plugin_eval"
-	bool eval = this->evalRule(results, subscription.getRule());
-
-	// Return send notification action
-	return instance->handleState(eval);
+		// Return send notification action
+		return instance->handleState(eval);
+	}
+	return false;
 }
 
 /**
