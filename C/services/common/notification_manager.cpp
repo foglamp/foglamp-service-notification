@@ -922,7 +922,10 @@ RulePlugin* NotificationManager::createRuleCategory(const string& name,
 					    rulePluginConfig);
 
 	// Unregister configuration changes	
-	m_managerClient->unregisterCategory(ruleCategoryName);
+	// NOTE:
+	// currently unregisterCategory is not called
+	// as we don't change at run time the rule plugin
+	//m_managerClient->unregisterCategory(ruleCategoryName);
 
 	// Create category, don't merge existing values
 	if (!m_managerClient->addCategory(ruleDefConfig, false))
@@ -994,8 +997,11 @@ DeliveryPlugin* NotificationManager::createDeliveryCategory(const string& name,
 	DefaultConfigCategory deliveryDefConfig(deliveryCategoryName,
 						deliveryPluginConfig);
 
-	// Unregister configuration changes	
-	m_managerClient->unregisterCategory(deliveryCategoryName);
+	// Unregister configuration changes
+	// NOTE:
+	// currently unregisterCategory is not called
+	// as we don't change at run time the delivery plugin
+	//m_managerClient->unregisterCategory(deliveryCategoryName);
 
 	// Create category, don't merge existing values
 	if (!m_managerClient->addCategory(deliveryDefConfig, false))
