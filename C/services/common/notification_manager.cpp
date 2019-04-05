@@ -146,7 +146,8 @@ NotificationInstance::NotificationInstance(const string& name,
 					   m_enable(enable),
 					   m_type(type),
 					   m_rule(rule),
-					   m_delivery(delivery)
+					   m_delivery(delivery),
+					   m_zombie(false)
 {
 	// Set initial state for notification delivery
 	m_lastSent = 0;
@@ -1395,6 +1396,10 @@ bool NotificationInstance::updateInstance(const string& name,
 /**
  * Remove an instance from instances map
  *
+ * Rather than actually delete them we mark them as zombies
+ * so that they will be deleted when we are sure the system is not
+ * processing the notification.
+ *
  * @param    instanceName	The instance name to remove.
  * @return			True for found instance removed,
  *				false otherwise.
@@ -1409,13 +1414,26 @@ bool NotificationManager::removeInstance(const string& instanceName)
 	auto r = m_instances.find(instanceName);
 	if (r != m_instances.end())
 	{
-		delete (*r).second;
-		(*r).second = NULL;
-		m_instances.erase(r);
-
+		(*r).second->markAsZombie();
 		ret = true;
 	}
 	return ret;
+}
+
+/**
+ * Traverse all the instances and remove the zombies
+ */
+void NotificationManager::collectZombies()
+{
+	lock_guard<mutex> guard(m_instancesMutex);
+	for (auto r = m_instances.begin(); r != m_instances.end(); ++r)
+	{
+		if (r->second->isZombie())
+		{
+			delete r->second;
+			m_instances.erase(r);
+		}
+	}
 }
 
 /**
