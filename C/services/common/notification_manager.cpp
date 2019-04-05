@@ -849,17 +849,22 @@ bool NotificationManager::APIcreateEmptyInstance(const string& name)
 	// Create an empty Notification category
 	string payload = "{\"name\" : {\"description\" : \"The name of this notification\", "
 			 "\"readonly\": \"true\", "
-			 "\"type\" : \"string\", \"default\": \"Notification " + name + "\"}, ";
+			 "\"type\" : \"string\", \"default\": \"" + name + "\"}, ";
 	payload += "\"description\" :{\"description\" : \"Description of this notification\", "
+			 "\"displayName\" : \"Description\", \"order\" : \"1\","
 			 "\"type\": \"string\", \"default\": \"\"}, "
 			 "\"rule\" : {\"description\": \"Rule to evaluate\", "
+			 "\"displayName\" : \"Rule\", \"order\" : \"2\","
 			 "\"type\": \"string\", \"default\": \"\"}, "
 			 "\"channel\": {\"description\": \"Channel to send alert on\", "
+			 "\"displayName\" : \"Channel\", \"order\" : \"3\","
 			 "\"type\": \"string\", \"default\": \"\"}, "
 			 "\"notification_type\": {\"description\": \"Type of notification\", \"type\": "
 			 "\"enumeration\", \"options\": [ \"one shot\", \"retriggered\", \"toggled\" ], "
+			 "\"displayName\" : \"Type\", \"order\" : \"4\","
 			 "\"default\" : \"one shot\"}, "
 			 "\"enable\": {\"description\" : \"Enabled\", "
+			 "\"displayName\" : \"Enabled\", \"order\" : \"5\","
 			 "\"type\": \"boolean\", \"default\": \"false\"}}";
 
 	DefaultConfigCategory notificationConfig(name, payload);
