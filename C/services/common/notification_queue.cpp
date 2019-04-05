@@ -342,6 +342,13 @@ bool NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 		}
 	}
 
+	/*
+	 * Now collect all pending deletes of notification instances
+	 * and really delete them. We defer this until we know we are not
+	 * processing any of the noptifications.
+	 */
+	NotificationManager::getInstance()->collectZombies();
+
 	return ret;
 }
 

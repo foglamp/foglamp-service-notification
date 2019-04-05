@@ -197,6 +197,8 @@ class NotificationInstance
 		void			enable() { m_enable = true; };
 		void			disable() { m_enable = false; };
 		void			setType(NotificationType type) { m_type = type; }; 
+		void			markAsZombie() { m_zombie = true; };
+		bool			isZombie() { return m_zombie; };
 
 	private:
 		const std::string	m_name;
@@ -206,6 +208,7 @@ class NotificationInstance
 		NotificationDelivery*	m_delivery;
 		time_t			m_lastSent;
 		NotificationState	m_state;
+		bool			m_zombie;
 };
 
 typedef NotificationInstance::NotificationType NOTIFICATION_TYPE;
@@ -252,6 +255,7 @@ class NotificationManager
 		bool			auditNotification(const std::string& notification);
 		bool			APIdeleteInstance(const string& instanceName);
 		void			updateSentStats() { m_stats.sent++; };
+		void			collectZombies();
 
 	private:
 		PLUGIN_HANDLE		loadRulePlugin(const std::string& rulePluginName);
