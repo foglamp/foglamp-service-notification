@@ -603,3 +603,69 @@ bool NotificationApi::removeNotification(const string& name)
 	}
 	return ret;
 }
+
+/**
+ * Check if a char is an hex value
+ *
+ * @param c	The input char
+ * @return	True with hex value
+ * 		false otherwise
+ */
+bool NotificationApi::ishex (const char c)
+{
+	if (isdigit(c) ||
+	    c=='A' ||
+	    c=='B' ||
+	    c=='C' ||
+	    c=='D' ||
+	    c=='E' ||
+	    c=='F')
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+/**
+ * URL decode of a given string
+ *
+ * @param name	The string to decode
+ * @return	The URL decoded string
+ *
+ * In case of decoding errors the routine returns
+ * current decoded string
+ */
+string NotificationApi::decodeName(const std::string& name)
+{
+	std::string decoded(name);
+	char* s = (char *)name.c_str();
+	char* dec = (char *)decoded.c_str();
+	char* o;
+	const char* end = s + name.length();
+	int c;
+
+	for (o = dec; s <= end; o++)
+	{
+		c = *s++;
+		if (c == '+')
+		{
+			c = ' ';
+		}
+		else if (c == '%' && (!ishex(*s++) ||
+			 !ishex(*s++) ||
+			 !sscanf(s - 2, "%2x", &c)))
+		{
+			break;
+		}
+
+		if (dec)
+		{
+			*o = c;
+		}
+	}
+
+	return string(dec);
+}
