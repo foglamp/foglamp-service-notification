@@ -951,12 +951,16 @@ RulePlugin* NotificationManager::createRuleCategory(const string& name,
 		return NULL;
 	}
 
-	// Set new rule plugin name in "value"
-	m_managerClient->setCategoryItemValue(ruleCategoryName,
-					      "plugin",
-					      rule);
 	try
 	{
+		// Set new rule plugin name in "value"
+		m_managerClient->setCategoryItemValue(ruleCategoryName,
+						      "plugin",
+						      rule);
+
+		// Set new rule plugin name in "value"
+		m_managerClient->setCategoryItemValue(ruleCategoryName,
+
 		// Add ruleCategoryName as child of Notification name
 		vector<string> children;
 		children.push_back(ruleCategoryName);
@@ -967,7 +971,7 @@ RulePlugin* NotificationManager::createRuleCategory(const string& name,
 	}
 	catch (std::exception* ex)
 	{
-		string errMsg("Cannot create/update '" + \
+		string errMsg("Cannot create/update/register '" + \
 			      ruleCategoryName + "' rule plugin category: " + ex->what());
 		m_logger->fatal(errMsg.c_str());
 		delete ex;
@@ -1027,13 +1031,13 @@ DeliveryPlugin* NotificationManager::createDeliveryCategory(const string& name,
 		return NULL;
 	}
 
-	// Set new delivery plugin name in "value"
-	m_managerClient->setCategoryItemValue(deliveryCategoryName,
-					      "plugin",
-					      delivery);
-
 	try
 	{
+		// Set new delivery plugin name in "value"
+		m_managerClient->setCategoryItemValue(deliveryCategoryName,
+						      "plugin",
+						      delivery);
+
 		// Add ruleCategoryName as child of Notification name
 		vector<string> children;
 		children.push_back(deliveryCategoryName);
@@ -1044,7 +1048,7 @@ DeliveryPlugin* NotificationManager::createDeliveryCategory(const string& name,
 	}
 	catch (std::exception* ex)
 	{
-		string errMsg("Cannot create/update '" + \
+		string errMsg("Cannot create/update/register '" + \
 			      deliveryCategoryName + "' rule delivery category: " + ex->what());
 		delete ex;
 		delete deliveryPlugin;
