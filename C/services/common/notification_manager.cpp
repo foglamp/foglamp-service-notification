@@ -24,8 +24,16 @@
 #include <undermin_rule.h>
 #include <notification_subscription.h>
 #include <notification_queue.h>
+#include <reading.h>
 
 using namespace std;
+
+extern "C" {
+void ingestCB(NotificationService *service, Reading *reading)
+{
+	service->ingestReading(*reading);
+}
+};
 
 NotificationManager* NotificationManager::m_instance = 0;
 
@@ -1161,6 +1169,10 @@ bool NotificationManager::setupInstance(const string& name,
 		// and instantiate  NotificationDelivery class
 		if (deliver->init(deliveryConfig))
 		{
+			if (deliver->ingestData())
+			{
+				deliver->registerIngest((void *)ingestCB, (void *)m_service);
+			}
 			theDelivery = new NotificationDelivery(deliveryCategoryName,
 								config.getName(),
 								deliver,
