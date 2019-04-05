@@ -55,6 +55,21 @@ PLUGIN_HANDLE DeliveryPlugin::init(const ConfigCategory& config)
 }
 
 /**
+ * Register a function that the plugin canm call to ingest a reading
+ *
+ * @param func	The function to call
+ * @param data	First argument to pass t above function
+ */
+void DeliveryPlugin::registerIngest(void *func, void *data)
+{
+void (*pluginRegisterPtr)(PLUGIN_HANDLE, void *, void *) =
+       			(void (*)(PLUGIN_HANDLE, void *, void *))
+			      manager->resolveSymbol(handle, "plugin_registerIngest");
+	if (pluginRegisterPtr)
+		(*pluginRegisterPtr)(m_instance, func, data);
+}
+
+/**
  * Call the loaded plugin "plugin_shutdown" method
  */
 void DeliveryPlugin::shutdown()

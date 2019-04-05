@@ -13,8 +13,9 @@
 #include <service_handler.h>
 #include <management_client.h>
 #include <management_api.h>
-
 #include <notification_api.h>
+#include <reading.h>
+#include <storage_client.h>
 
 #define SERVICE_NAME		"FogLAMP Notification"
 #define SERVICE_TYPE		"Notification"
@@ -36,6 +37,10 @@ class NotificationService : public ServiceHandler
 		void			configChange(const std::string&,
 						     const std::string&);
 		void			registerCategory(const std::string& categoryName);
+		void			ingestReading(Reading& reading)
+					{
+						m_storage->readingAppend(reading);
+					};
 
 	private:
 		const std::string	m_name;
@@ -44,6 +49,7 @@ class NotificationService : public ServiceHandler
 		NotificationApi*	m_api;
 		ManagementClient* 	m_managerClient;
 		ManagementApi*		m_managementApi;
+		StorageClient		*m_storage;
 		std::map<std::string, bool>
 					m_registerCategories;
 };
