@@ -958,9 +958,6 @@ RulePlugin* NotificationManager::createRuleCategory(const string& name,
 						      "plugin",
 						      rule);
 
-		// Set new rule plugin name in "value"
-		m_managerClient->setCategoryItemValue(ruleCategoryName,
-
 		// Add ruleCategoryName as child of Notification name
 		vector<string> children;
 		children.push_back(ruleCategoryName);
