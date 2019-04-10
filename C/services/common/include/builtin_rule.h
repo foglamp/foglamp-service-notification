@@ -16,6 +16,11 @@
 #include <rule_plugin.h>
 
 /**
+ * JSON data types (string values)
+ */
+static const char* kTypeNames[] = { "Null", "False", "True", "Object", "Array", "String", "Number" };
+
+/**
  * This class represents the basic notification trigger:
  * for given asset name we set evaluation_type,
  * time intervsl and needed datapoints with a

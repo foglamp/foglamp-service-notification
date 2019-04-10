@@ -268,12 +268,14 @@ void OverMaxRule::reconfigure(const string& newConfig)
  * Check whether the input datapoint
  * is a NUMBER and its value is greater than configured DOUBLE limit
  *
+ * @param    name		The datapoint name, just for error logging
  * @param    point		Current input datapoint
  * @param    limitValue		The DOUBLE limit value
  * @return			True if limit is hit,
  *				false otherwise
  */
-bool OverMaxRule::checkLimit(const Value& point,
+bool OverMaxRule::checkLimit(const std::string& name,
+			     const Value& point,
 			     double limitValue)
 {
 	bool ret = false;
@@ -281,37 +283,27 @@ bool OverMaxRule::checkLimit(const Value& point,
 	// Check config datapoint type
 	if (point.GetType() == kNumberType)
 	{
-		if (point.IsDouble())
-		{       
-			if (point.GetDouble() > limitValue)
-			{       
-				ret = true;
-			}
-		}
-		else
+		ret = this->evalDatapoint(name, point, limitValue);
+	}
+        else if (point.GetType() == kArrayType)
+	{
+		// Array of values: get all values and
+		// return after first successfull evaluation
+		for (auto& v : point.GetArray())
 		{
-  			if (point.IsInt() ||
-			    point.IsUint() ||
-			    point.IsInt64() ||
-			    point.IsUint64())
+			ret = this->evalDatapoint(name, v, limitValue);
+			if (ret)
 			{
-				if (point.IsInt() ||
-				    point.IsUint())
-				{
-					if (point.GetInt() > limitValue)
-					{
-						ret = true;
-					}
-				}
-				else
-				{
-					if (point.GetInt64() > limitValue)
-					{
-						ret = true;
-					}
-				}
+				break;
 			}
 		}
+	}
+	else
+	{
+		Logger::getLogger()->warn("%s: datapoint %s has unsupported data type of %s",
+					  RULE_NAME,
+					  name.c_str(),
+					  kTypeNames[point.GetType()]);
 	}
 
 	return ret;
@@ -346,7 +338,9 @@ bool OverMaxRule::evalAsset(const Value& assetValue,
 			// Check configuration datapoint type
 			if ((*it)->getData().getType() == DatapointValue::T_FLOAT)
 			{
-				assetEval = checkLimit(point, (*it)->getData().toDouble());
+				assetEval = checkLimit(datapointName,
+							point,
+							(*it)->getData().toDouble());
 			}
 			else
 			{
@@ -426,4 +420,61 @@ void OverMaxRule::configure(const ConfigCategory& config)
 						   RULE_NAME);
 		}
 	}
+
+}
+
+/**
+ * Eval JSON data against limit value
+ *
+ * @param    name		The datapoint name, just for error logging
+ * @param    point		Input data: single value or array of values
+ * @param    limitValue		The limit value for inout data
+ * @return			True is data value is above the limit value,
+ *				false otherwise
+ */
+bool OverMaxRule::evalDatapoint(const string& name,
+				const Value& point,
+				double limitValue)
+{
+	bool ret = false;
+	if (point.IsDouble())
+	{
+		if (point.GetDouble() > limitValue)
+		{
+			ret = true;
+		}
+	}
+	else
+	{
+		if (point.IsInt() ||
+		    point.IsUint() ||
+		    point.IsInt64() ||
+		    point.IsUint64())
+		{
+			if (point.IsInt() ||
+			    point.IsUint())
+			{
+				if (point.GetInt() > limitValue)
+				{
+					ret = true;
+				}
+			}
+			else
+			{
+				if (point.GetInt64() > limitValue)
+				{
+					ret = true;
+				}
+			}
+		}
+		else
+		{
+			Logger::getLogger()->warn("%s: data point %s has unsupported type of %s",
+						  RULE_NAME,
+						  name.c_str(),
+						  kTypeNames[point.GetType()]);
+		}
+	}
+
+	return ret;
 }
