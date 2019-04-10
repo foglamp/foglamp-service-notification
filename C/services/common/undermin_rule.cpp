@@ -184,8 +184,6 @@ string UnderMinRule::triggers()
  */
 bool UnderMinRule::eval(const string& assetValues)
 {
-	Logger::getLogger()->error("--- UnderMinRule::eval: %s", assetValues.c_str());
-
 	Document doc;
 	doc.Parse(assetValues.c_str());
 	if (doc.HasParseError())
