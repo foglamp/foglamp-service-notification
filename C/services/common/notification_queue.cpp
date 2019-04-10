@@ -688,24 +688,12 @@ bool NotificationQueue::processAllReadings(NotificationDetail& info,
 
 	switch(info.getType())
 	{
-	case EvaluationType::Latest:
-		 // Just process the last buffer
-		{
-		string output = this->processLastBuffer(readingsData.back());
-		if (!output.empty())
-		{
-			// This notification is ready
-			evalRule = true;
-
-			// Update data in the output buffer
-			results[assetName] = output;
-		}
-		break;
-		}
-
+	 // These take one value
 	case EvaluationType::Minimum:
 	case EvaluationType::Maximum:
 	case EvaluationType::Average:
+	// These take an array of values
+	case EvaluationType::Latest:
 	case EvaluationType::Window:
 	default:
 		// Process ALL buffers
@@ -727,7 +715,9 @@ bool NotificationQueue::processAllReadings(NotificationDetail& info,
 				string dataPointName = (*c).first;
 				content += "\"" + dataPointName + "\" : ";
 
-				if (info.getType() == EvaluationType::Window)
+				// Format output array for multiple values
+				if (info.getType() == EvaluationType::Latest ||
+				    info.getType() == EvaluationType::Window)
 				{
 					// Add leading "[" and trailing "]"
 					content +=  "[ " + (*c).second +  " ]";
@@ -930,7 +920,9 @@ NotificationQueue::processAllBuffers(vector<NotificationDataElement *>& readings
 				  ++d)
 			{
 				string key = (*d)->getName();
-				if (type != EvaluationType::Window)
+				// Set a value or add data to the window
+				if (type != EvaluationType::Latest &&
+				    type != EvaluationType::Window)
 				{
 					// Set MIN or MAX or SUM
 					this->setValue(result, *d, type);
@@ -947,8 +939,10 @@ NotificationQueue::processAllBuffers(vector<NotificationDataElement *>& readings
 				}
 			}
 
-			// Check whether the notification is ready
-			if ((last_time - current_time) > timeInterval)
+			// Check whether the notification is ready within
+			// the timeInterval (only if not Latest)
+			if (type != EvaluationType::Latest &&
+			    (last_time - current_time) > timeInterval)
 			{
 				evalRule = true;
 				// Exit from readings loop
@@ -961,6 +955,17 @@ NotificationQueue::processAllBuffers(vector<NotificationDataElement *>& readings
 			// Exit from buffers loop
 			break;
 		}
+	}
+
+	/**
+	 * All or some buffers processed.
+	 *
+	 * If latest, we have kept all the data in all the buffers,
+	 * no matter the value of timeInterval: set evalRule to true.
+	 */
+	if (type == EvaluationType::Latest)
+	{
+		evalRule = true;
 	}
 
 	// Create result map 
@@ -1027,6 +1032,7 @@ NotificationQueue::processAllBuffers(vector<NotificationDataElement *>& readings
 			return ret;
 			break;
 
+		case EvaluationType::Latest:
 		case EvaluationType::Window:
 			// Return window data
 			return window;
