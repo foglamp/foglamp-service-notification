@@ -342,12 +342,17 @@ bool NotificationSubscription::createSubscription(NotificationInstance* instance
 void NotificationSubscription::removeSubscription(const string& assetName,
 						  const string& ruleName)
 {
+	// Get all instances
+	NotificationManager* manager = NotificationManager::getInstance();
+
+	// Get subscriptions for assetName
 	this->lockSubscriptions();
 	map<string, vector<SubscriptionElement>>&
 		allSubscriptions = this->getAllSubscriptions();
 	auto it = allSubscriptions.find(assetName);
 	bool ret = it != allSubscriptions.end();
 	this->unlockSubscriptions();
+
 	// For the found assetName subscriptions
 	// 1- Unsubscribe notification interest for assetNamme
 	// 2- Remove data in buffer[ruleName][assetName]
@@ -356,7 +361,7 @@ void NotificationSubscription::removeSubscription(const string& assetName,
 	if (ret)
 	{
 		// Get Notification queue instance
-		vector<SubscriptionElement> elems = (*it).second;
+		vector<SubscriptionElement>& elems = (*it).second;
 		if (elems.size() == 1)
 		{
 		        // 1- We have only one subscription for current asset
@@ -369,23 +374,48 @@ void NotificationSubscription::removeSubscription(const string& assetName,
 		// 2- Remove all data in buffer[ruleName][assetName]
 		queue->clearBufferData(ruleName, assetName);
 
-		// 3- Check all subscrioptions rules for given assetName
+		// 3- Check all subscriptions rules for given assetName
 		for (auto e = elems.begin();
 			  e != elems.end(); )
 		{
 			// Get notification rule object 
-			if ((*e).getRule())
+			string notificationName = (*e).getNotificationName();
+			manager->lockInstances();
+			NotificationInstance* instance = manager->getNotificationInstance(notificationName);
+			manager->unlockInstances();
+
+			if (instance &&
+			    !instance->isZombie())
 			{
-				string currentRule = (*e).getRule()->getName();
+				string currentRule = instance->getRule()->getName();
 				if (currentRule.compare(ruleName) == 0)
 				{
 					// 3- Remove this ruleName from array
+					Logger::getLogger()->debug("Notification instance %s: removed subscription %s for asset %s",
+								   notificationName.c_str(),
+								   currentRule.c_str(),
+								   assetName.c_str());
 					elems.erase(e);
 				}
 				else
 				{
+					Logger::getLogger()->debug("Notification instance %s: Not removing subscription %s for asset %s",
+								   notificationName.c_str(),
+								   currentRule.c_str(),
+								   assetName.c_str());
 					++e;
 				}
+			}
+			else
+			{
+				if (!instance)
+				{
+					Logger::getLogger()->debug("Notification instance %s has not been found, for asset %s",
+								   notificationName.c_str(),
+								   assetName.c_str());
+				}
+
+				++e;
 			}
 		}
 

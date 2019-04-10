@@ -295,10 +295,32 @@ void NotificationManager::addInstance(const string& instanceName,
 {
 	// Protect changes to m_instances
 	lock_guard<mutex> guard(m_instancesMutex);
-
-	if (m_instances.find(instanceName) != m_instances.end())
+	auto instance = m_instances.find(instanceName);
+	if (instance != m_instances.end())
 	{
-		// Already set
+		if (!instance->second->isZombie())
+		{
+			// Already set
+			Logger::getLogger()->error("-- Already set %s", instanceName.c_str());
+		}
+		else
+		{
+			Logger::getLogger()->error("-- Zombie seen %s", instanceName.c_str());
+
+			delete instance->second;
+			instance->second = NULL;
+			m_instances.erase(instance);
+
+			Logger::getLogger()->error("-- Zombie DELETED %s", instanceName.c_str());
+			// Add it
+			NotificationInstance* instance = new NotificationInstance(instanceName,
+										  enabled,
+										  type,
+										  rule,
+										  delivery);
+			m_instances[instanceName] = instance;
+			Logger::getLogger()->error("-- New added after zombie %s", instanceName.c_str());
+		}
 	}
 	else
 	{
@@ -309,6 +331,7 @@ void NotificationManager::addInstance(const string& instanceName,
 									  rule,
 									  delivery);
 		m_instances[instanceName] = instance;
+		Logger::getLogger()->error("-- New added %s", instanceName.c_str());
 	}
 }
 
@@ -1316,6 +1339,16 @@ bool NotificationInstance::updateInstance(const string& name,
 
 		// Create a new one with new config
 		bool ret = instances->setupInstance(name, newConfig);
+		if (ret)
+		{
+			Logger::getLogger()->info("Succesfully disabled notification instance '%s'",
+						   name.c_str());
+		}
+		else
+		{
+			Logger::getLogger()->fatal("Errors found while disabling notification instance '%s'",
+						   name.c_str());
+		}
 
 		// Just create a new one, not enabled, replacing current one
 		return ret;
@@ -1434,6 +1467,8 @@ bool NotificationManager::removeInstance(const string& instanceName)
 	{
 		(*r).second->markAsZombie();
 		ret = true;
+		Logger::getLogger()->debug("Instance %s marked as Zombie",
+					   instanceName.c_str());
 	}
 	return ret;
 }
@@ -1448,7 +1483,12 @@ void NotificationManager::collectZombies()
 	{
 		if (r->second->isZombie())
 		{
+			Logger::getLogger()->debug("Instance %s removed from m_instances",
+					   r->second->getName().c_str());
+			// Free memory
 			delete r->second;
+			r->second = NULL;
+			// Remove element
 			m_instances.erase(r);
 		}
 	}
