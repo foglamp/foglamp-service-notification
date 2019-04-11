@@ -293,6 +293,8 @@ void NotificationManager::addInstance(const string& instanceName,
 				      NotificationRule* rule,
 				      NotificationDelivery* delivery)
 {
+	bool createInstance = true;
+
 	// Protect changes to m_instances
 	lock_guard<mutex> guard(m_instancesMutex);
 	auto instance = m_instances.find(instanceName);
@@ -301,37 +303,31 @@ void NotificationManager::addInstance(const string& instanceName,
 		if (!instance->second->isZombie())
 		{
 			// Already set
-			Logger::getLogger()->error("-- Already set %s", instanceName.c_str());
+			Logger::getLogger()->debug("Instance %s already set", instanceName.c_str());
+
+			// Don't create a new instance
+			createInstance = false;
 		}
 		else
 		{
-			Logger::getLogger()->error("-- Zombie seen %s", instanceName.c_str());
+			// Zombie instance: delete it now
+			Logger::getLogger()->debug("Zombie instance %s detected, deleting it ...", instanceName.c_str());
 
 			delete instance->second;
 			instance->second = NULL;
 			m_instances.erase(instance);
-
-			Logger::getLogger()->error("-- Zombie DELETED %s", instanceName.c_str());
-			// Add it
-			NotificationInstance* instance = new NotificationInstance(instanceName,
-										  enabled,
-										  type,
-										  rule,
-										  delivery);
-			m_instances[instanceName] = instance;
-			Logger::getLogger()->error("-- New added after zombie %s", instanceName.c_str());
 		}
 	}
-	else
+
+	if (createInstance)
 	{
-		// Add it
+		// Add a new instance
 		NotificationInstance* instance = new NotificationInstance(instanceName,
 									  enabled,
 									  type,
 									  rule,
 									  delivery);
 		m_instances[instanceName] = instance;
-		Logger::getLogger()->error("-- New added %s", instanceName.c_str());
 	}
 }
 

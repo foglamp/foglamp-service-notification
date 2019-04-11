@@ -407,8 +407,6 @@ bool NotificationQueue::feedDataBuffer(const std::string& ruleName,
 				       const std::string& assetName,
 				       ReadingSet* assetData)
 {
-	Logger::getLogger()->error(">> Feeding %s:%s", ruleName.c_str(), assetName.c_str());
-
 	vector<Reading *> readings = assetData->getAllReadings();
 	vector<Reading *> newReadings;
 	// Create a ReadingSet deep copy
@@ -431,6 +429,10 @@ bool NotificationQueue::feedDataBuffer(const std::string& ruleName,
 	lock_guard<mutex> guard(m_bufferMutex);
 	NotificationDataBuffer& dataContainer = this->m_ruleBuffers[ruleName];
 	dataContainer.append(assetName, newdata);
+
+	Logger::getLogger()->debug("Feeding buffer[%s][%s] ...",
+				   ruleName.c_str(),
+				   assetName.c_str());
 
 	return true;
 }
@@ -709,10 +711,9 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 									instance->getDelivery()->getText()));
 
 					// Audit log
-					NotificationManager* instances = NotificationManager::getInstance();
-					instances->auditNotification(instance->getName());
+					manager->auditNotification(instance->getName());
 					// Update sent notification statistics
-					instances->updateSentStats();
+					manager->updateSentStats();
 				}
 			}
 		}
