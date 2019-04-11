@@ -692,11 +692,20 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 
 				// Call delivery "plugin_deliver"
 				DeliveryPlugin* plugin = instance->getDeliveryPlugin();
+				if (!plugin->isEnabled())
+				{
+					Logger::getLogger()->info("Delivery plugin '%s' is not enabled "
+								  "in notification '%s'",
+								  plugin->getName().c_str(),
+								  (*it).getNotificationName().c_str());
+					continue;
+				}
+
 				if (!instance ||
 				    !instance->isEnabled() ||
 				    !instance->getDelivery())
 				{
-					Logger::getLogger()->error("Aborting delivery for notification %s",
+					Logger::getLogger()->error("Aborting delivery for notification '%s'",
 								   (*it).getNotificationName().c_str());
 				}
 				else
