@@ -40,6 +40,9 @@ DeliveryPlugin::DeliveryPlugin(const std::string& name,
 
 	// Persist data initialised
 	m_plugin_data = NULL;
+
+	// Set disable
+	m_enabled = false;
 }
 
 //DeliveryPlugin destructor
@@ -51,6 +54,9 @@ DeliveryPlugin::~DeliveryPlugin()
 PLUGIN_HANDLE DeliveryPlugin::init(const ConfigCategory& config)
 {
 	m_instance = this->pluginInit(&config);
+	// Set the enable flag
+	this->setEnabled(config);
+	// Return instance
 	return (m_instance ? &m_instance : NULL);
 }
 
@@ -117,6 +123,27 @@ void DeliveryPlugin::reconfigure(const string& newConfig)
 {
 	if (this->pluginReconfigurePtr)
 	{
+		ConfigCategory reconfig("new_cfg", newConfig);
+		this->setEnabled(reconfig);
+
 		return this->pluginReconfigurePtr(m_instance, newConfig);
+	}
+}
+
+/**
+ * Set the enable flag from configuration
+ *
+ * @param    config	The configuration of the plugin
+ */
+void DeliveryPlugin::setEnabled(const ConfigCategory& config)
+{
+	// Set the enable flag
+	if (config.itemExists("enable"))
+	{
+		m_enabled = config.getValue("enable").compare("true") == 0 ||
+			    config.getValue("enable").compare("True") == 0;
+
+		Logger::getLogger()->debug("DeliveryPlugin::setEnabled = %d",
+					   m_enabled);
 	}
 }
