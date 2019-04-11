@@ -293,16 +293,35 @@ void NotificationManager::addInstance(const string& instanceName,
 				      NotificationRule* rule,
 				      NotificationDelivery* delivery)
 {
+	bool createInstance = true;
+
 	// Protect changes to m_instances
 	lock_guard<mutex> guard(m_instancesMutex);
+	auto instance = m_instances.find(instanceName);
+	if (instance != m_instances.end())
+	{
+		if (!instance->second->isZombie())
+		{
+			// Already set
+			Logger::getLogger()->debug("Instance %s already set", instanceName.c_str());
 
-	if (m_instances.find(instanceName) != m_instances.end())
-	{
-		// Already set
+			// Don't create a new instance
+			createInstance = false;
+		}
+		else
+		{
+			// Zombie instance: delete it now
+			Logger::getLogger()->debug("Zombie instance %s detected, deleting it ...", instanceName.c_str());
+
+			delete instance->second;
+			instance->second = NULL;
+			m_instances.erase(instance);
+		}
 	}
-	else
+
+	if (createInstance)
 	{
-		// Add it
+		// Add a new instance
 		NotificationInstance* instance = new NotificationInstance(instanceName,
 									  enabled,
 									  type,
@@ -1316,6 +1335,16 @@ bool NotificationInstance::updateInstance(const string& name,
 
 		// Create a new one with new config
 		bool ret = instances->setupInstance(name, newConfig);
+		if (ret)
+		{
+			Logger::getLogger()->info("Succesfully disabled notification instance '%s'",
+						   name.c_str());
+		}
+		else
+		{
+			Logger::getLogger()->fatal("Errors found while disabling notification instance '%s'",
+						   name.c_str());
+		}
 
 		// Just create a new one, not enabled, replacing current one
 		return ret;
@@ -1434,6 +1463,8 @@ bool NotificationManager::removeInstance(const string& instanceName)
 	{
 		(*r).second->markAsZombie();
 		ret = true;
+		Logger::getLogger()->debug("Instance %s marked as Zombie",
+					   instanceName.c_str());
 	}
 	return ret;
 }
@@ -1448,7 +1479,12 @@ void NotificationManager::collectZombies()
 	{
 		if (r->second->isZombie())
 		{
+			Logger::getLogger()->debug("Instance %s removed from m_instances",
+					   r->second->getName().c_str());
+			// Free memory
 			delete r->second;
+			r->second = NULL;
+			// Remove element
 			m_instances.erase(r);
 		}
 	}

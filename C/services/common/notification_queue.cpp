@@ -155,6 +155,8 @@ void NotificationQueue::stop()
 		return;
 	}
 
+	NotificationManager* manager = NotificationManager::getInstance();
+
 	// NOTE:
 	//
 	// Notificatiion API server is down: we cannot receive any configuration change
@@ -173,19 +175,29 @@ void NotificationQueue::stop()
 			  s != (*it).second.end();
 			  ++s)
 		{
-			// Get ruleName
-			string ruleName = (*s).getRule()->getName();
-			// Get all assests belonging to current rule
-			vector<NotificationDetail>& assets = (*s).getRule()->getAssets();
+			// Get notification rule object
+			string notificationName = (*s).getNotificationName();
+			manager->lockInstances();
+			NotificationInstance* instance = manager->getNotificationInstance(notificationName);
+			manager->unlockInstances();
 
-			//Iterate trough assets
-			for (auto itr = assets.begin();
-				  itr != assets.end();
-				   ++itr)
+			// Get ruleName
+			if (instance &&
+			    instance->getRule())
 			{
-				// Remove all buffers:
-				// queue process is donwn, queue lock not needed
-				this->clearBufferData(ruleName, (*itr).getAssetName());
+				string ruleName = instance->getRule()->getName();
+				// Get all assests belonging to current rule
+				vector<NotificationDetail>& assets = instance->getRule()->getAssets();
+
+				//Iterate trough assets
+				for (auto itr = assets.begin();
+					  itr != assets.end();
+					   ++itr)
+				{
+					// Remove all buffers:
+					// queue process is donwn, queue lock not needed
+					this->clearBufferData(ruleName, (*itr).getAssetName());
+				}
 			}
 		}
 	}
@@ -308,6 +320,10 @@ void NotificationQueue::processDataSet(NotificationQueueElement* data)
  */
 bool NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 {
+	if (!data)
+	{
+		return false;
+	}
 	bool ret = false;
 
 	// Get assetName in the data element
@@ -319,6 +335,10 @@ bool NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 	{
 		return false;
 	}
+
+	// Get NotificationManager instance
+	NotificationManager* manager = NotificationManager::getInstance();
+
 	subscriptions->lockSubscriptions();
 	std::vector<SubscriptionElement>&
 		subscriptionItems = subscriptions->getSubscription(assetName);
@@ -328,17 +348,40 @@ bool NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 		  it != subscriptionItems.end();
 		  ++it)
 	{
-		// Get subscription ruleName for the assetName
-		string ruleName = (*it).getRule()->getName();
-
-		// Feed buffer[ruleName][theAsset] with Readings data
-		NotificationInstance* instance = (*it).getInstance();
+		// Get notification instance name
+		string notificationName = (*it).getNotificationName();
+		// Get instance pointer
+		manager->lockInstances();
+		NotificationInstance* instance = manager->getNotificationInstance(notificationName);
+		manager->unlockInstances();
+		
 		if (instance &&
 		    instance->isEnabled())
 		{
+			// Get ruleName for the assetName
+			string ruleName = instance->getRule()->getName();
+			// Feed buffer[ruleName][theAsset] with Readings data
 			ret = this->feedDataBuffer(ruleName,
 						   assetName,
 						   data->getAssetData());
+		}
+		else
+		{
+			if (instance)
+			{
+				if (instance->isZombie())
+				{
+					Logger::getLogger()->debug("Notification %s has Zombie instance for asset %s",
+						       		   notificationName.c_str(),
+							   	   assetName.c_str());
+				}
+			}
+			else
+			{
+				Logger::getLogger()->debug("Notification %s has no instance for asset %s",
+					       		   notificationName.c_str(),
+						   	   assetName.c_str());
+			}
 		}
 	}
 
@@ -347,7 +390,7 @@ bool NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 	 * and really delete them. We defer this until we know we are not
 	 * processing any of the noptifications.
 	 */
-	NotificationManager::getInstance()->collectZombies();
+	manager->collectZombies();
 
 	return ret;
 }
@@ -386,6 +429,10 @@ bool NotificationQueue::feedDataBuffer(const std::string& ruleName,
 	lock_guard<mutex> guard(m_bufferMutex);
 	NotificationDataBuffer& dataContainer = this->m_ruleBuffers[ruleName];
 	dataContainer.append(assetName, newdata);
+
+	Logger::getLogger()->debug("Feeding buffer[%s][%s] ...",
+				   ruleName.c_str(),
+				   assetName.c_str());
 
 	return true;
 }
@@ -578,6 +625,13 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 	std::vector<SubscriptionElement>&
 		registeredItems = subscriptions->getSubscription(assetName);
 	subscriptions->unlockSubscriptions();
+	if (!subscriptions)
+	{
+		return;
+	}
+
+	// Get NotificationManager instance
+	NotificationManager* manager = NotificationManager::getInstance();
 
 	// Iterate trough subscriptions
 	for (auto it = registeredItems.begin();
@@ -589,10 +643,30 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 		// Per asset notification map
 		map<string, string> results;
 
-		// Get ruleName
-		string ruleName = (*it).getRule()->getName();
+		// Get notification instance name
+		string notificationName = (*it).getNotificationName();
+		// Get instance pointer
+		manager->lockInstances();
+		NotificationInstance* instance = manager->getNotificationInstance(notificationName);
+		manager->unlockInstances();
+
+		// Check wether the instance exists and it is enabled
+		if (!instance ||
+		    !instance->getRule() ||
+		    !instance->isEnabled())
+		{
+			Logger::getLogger()->debug("Skipping instance for asset %s in notification %s",
+						   assetName.c_str(),
+						   (*it).getNotificationName().c_str());
+			// Skip this instance
+			continue;
+		}
+
+		// Get ruleName for the assetName
+		string ruleName = instance->getRule()->getName();
+
 		// Get all assests belonging to current rule
-		vector<NotificationDetail>& assets = (*it).getRule()->getAssets();
+		vector<NotificationDetail>& assets = instance->getRule()->getAssets();
 
 		// Iterate trough assets
 		for (auto itr = assets.begin();
@@ -613,14 +687,13 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 			bool ret = this->sendNotification(results, *it);
 			if (ret)
 			{
-				// Get notification instance
-				NotificationInstance* instance = (*it).getInstance();
-
 				// Call rule "plugin_reason"
-				string reason = (*it).getRule()->getPlugin()->reason();
+				string reason = instance->getRule()->getPlugin()->reason();
 
+				// Call delivery "plugin_deliver"
 				DeliveryPlugin* plugin = instance->getDeliveryPlugin();
 				if (!instance ||
+				    !instance->isEnabled() ||
 				    !instance->getDelivery())
 				{
 					Logger::getLogger()->error("Aborting delivery for notification %s",
@@ -638,10 +711,9 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 									instance->getDelivery()->getText()));
 
 					// Audit log
-					NotificationManager* instances = NotificationManager::getInstance();
-					instances->auditNotification(instance->getName());
+					manager->auditNotification(instance->getName());
 					// Update sent notification statistics
-					instances->updateSentStats();
+					manager->updateSentStats();
 				}
 			}
 		}
