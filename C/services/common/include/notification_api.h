@@ -23,9 +23,9 @@ using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 #define GET_NOTIFICATION_INSTANCES	"^/notification$"
 #define GET_NOTIFICATION_DELIVERY	"^/notification/delivery$"
 #define GET_NOTIFICATION_RULES		"^/notification/rules$"
-#define POST_NOTIFICATION_NAME		"^/notification/([A-Za-z][a-zA-Z0-9_%'\"]*)$"
-#define POST_NOTIFICATION_RULE_NAME	"^/notification/([A-Za-z][a-zA-Z0-9_%'\"]*)/rule/([A-Za-z][a-zA-Z0-9_%'\"]*)$"
-#define POST_NOTIFICATION_DELIVERY_NAME	"^/notification/([A-Za-z][a-zA-Z0-9_%'\"]*)/delivery/([A-Za-z][a-zA-Z0-9_%'\"]*)$"
+#define POST_NOTIFICATION_NAME		"^/notification/([A-Za-z][a-zA-Z0-9_%'\"\\-]*)$"
+#define POST_NOTIFICATION_RULE_NAME	"^/notification/([A-Za-z][a-zA-Z0-9_%'\"\\-]*)/rule/([A-Za-z][a-zA-Z0-9_%'\"\\-]*)$"
+#define POST_NOTIFICATION_DELIVERY_NAME	"^/notification/([A-Za-z][a-zA-Z0-9_%'\"\\-]*)/delivery/([A-Za-z][a-zA-Z0-9_%'\"\\-]*)$"
 #define ASSET_NAME_COMPONENT		1
 #define NOTIFICATION_NAME_COMPONENT	1
 #define RULE_NAME_COMPONENT		2
