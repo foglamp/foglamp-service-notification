@@ -591,9 +591,17 @@ void NotificationQueue::evalRule(map<string, AssetData>& results,
 			evalJSON += ", " ; 	
 		}
 
-		// Clear all data in buffer buffers[rule][asset]
-		lock_guard<mutex> guard(m_bufferMutex);
-		this->clearBufferData(rule->getName(), (*mm).first);
+		// Clean all buffers for Latest:
+		// NOTE:
+		// for other evaluation types we have already removed
+		// the right number of buffers after creating string data
+		// in processAllBuffers()
+		if ((*mm).second.type == EvaluationType::EVAL_TYPE::Latest)
+		{
+			// Clear all data in buffer buffers[rule][asset]
+			lock_guard<mutex> guard(m_bufferMutex);
+			this->clearBufferData(rule->getName(), (*mm).first);
+		}
 	}
 
 	evalJSON += " }" ; 	
