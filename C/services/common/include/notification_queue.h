@@ -18,6 +18,9 @@
 #include <reading_set.h>
 #include <notification_subscription.h>
 
+class ResultData;
+class AssetData;
+
 /**
  * Class that represents the notification data stored in the per rule buffers.
  */
@@ -31,11 +34,13 @@ class NotificationDataElement
 		const std::string&	getAssetName() { return m_asset; };
 		const std::string&	getRuleName() { return m_ruleName; };
 		ReadingSet*		getData() { return m_data; };
+		time_t			getTime() { return m_time; };
 
 	private:
 		const std::string	m_asset;
 		const std::string	m_ruleName;
 		ReadingSet*		m_data;
+		time_t			m_time;
 };
 
 /**
@@ -86,7 +91,7 @@ class NotificationQueue
 		bool			feedDataBuffer(const std::string& ruleName,
 						       const std::string& assetName,
 						       ReadingSet* assetData);
-		bool			processDataBuffer(std::map<std::string, std::string>&,
+		bool			processDataBuffer(std::map<std::string, AssetData>&,
 							  const std::string&ruleName,
 							  const std::string& assetName,
 							  NotificationDetail& element);
@@ -98,28 +103,34 @@ class NotificationQueue
 						       unsigned long num);
 		bool			processAllReadings(NotificationDetail& info,
 							   std::vector<NotificationDataElement *>& readingsData,
-							   std::map<std::string, std::string>& results);
-		bool			evalRule(std::map<std::string, std::string>& results,
+							   std::map<std::string, AssetData>& results);
+		void			evalRule(std::map<std::string, AssetData>& results,
 						 NotificationRule* rule);
 		std::string		processLastBuffer(NotificationDataElement* data);
-		bool			sendNotification(std::map<std::string, std::string>& results,
+		void			sendNotification(std::map<std::string, AssetData>& results,
 							 SubscriptionElement& subscription);
-		std::map<std::string, std::string>
-					processAllBuffers(std::vector<NotificationDataElement *>& readingsData,
+		void			processAllBuffers(std::vector<NotificationDataElement *>& readingsData,
 							  EvaluationType::EVAL_TYPE type,
-							  unsigned long timeInterval);
-		void			setValue(std::map<std::string, Datapoint *>& result,
+							  unsigned long timeInterval,
+							  std::map<std::string, std::string>& result);
+		void			setValue(std::map<std::string, ResultData>& result,
 						 Datapoint* d,
 						 EvaluationType::EVAL_TYPE type);
-		void			setMinValue(std::map<std::string, Datapoint *>& result,
+		void			setMinValue(std::map<std::string, ResultData>& result,
 						    const std::string& key,
 						    DatapointValue& val);
-		void			setMaxValue(std::map<std::string, Datapoint *>& result,
+		void			setMaxValue(std::map<std::string, ResultData>& result,
 						    const std::string& key,
 						    DatapointValue& val);
-		void			setSumValues(std::map<std::string, Datapoint *>& result,
+		void			setSumValues(std::map<std::string, ResultData>& result,
 						    const std::string& key,
 						    DatapointValue& val);
+		void			deliverNotification(NotificationRule* rule,
+							    const std::string& data);
+		void			aggregateData(std::vector<NotificationDataElement *>& readingsData,
+						      unsigned long size,
+						      EvaluationType::EVAL_TYPE type,
+						       std::map<std::string, std::string>& result);
 
 	private:
 		/**
@@ -165,5 +176,27 @@ class NotificationQueue
 					m_ruleBuffers;
 		Logger*                 m_logger;
 		std::mutex		m_bufferMutex;
+};
+
+/**
+ * This class keeps the result for Datapoint Min/Max/Avg
+ * (as vData[0]) or multiple ones for Window
+ */
+class ResultData
+{
+	public:
+		std::vector<Datapoint*>
+				vData;
+};
+
+/**
+ * This class keeps the string results of an evaluated asset and its datapoints
+ */
+class AssetData
+{
+	public:
+		EvaluationType::EVAL_TYPE
+				type;
+		std::string     sData;
 };
 #endif
