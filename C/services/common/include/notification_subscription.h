@@ -37,7 +37,13 @@ class SubscriptionElement
 			else
 				return NULL;
 		};
-		NotificationDelivery*	getDelivery() { return m_notification->getDelivery(); };
+		NotificationDelivery*	getDelivery()
+		{
+			if (m_notification)
+				return m_notification->getDelivery();
+			else
+				return NULL;
+		};
 		NotificationInstance*	getInstance() { return m_notification; };
 
 	private:
