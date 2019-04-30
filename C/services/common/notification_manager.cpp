@@ -869,7 +869,7 @@ bool NotificationManager::APIcreateEmptyInstance(const string& name)
 	// Create an empty Notification category
 	string payload = "{\"name\" : {\"description\" : \"The name of this notification\", "
 			 "\"readonly\": \"true\", "
-			 "\"type\" : \"string\", \"default\": \"" + name + "\"}, ";
+			 "\"type\" : \"string\", \"default\": \"" + JSONescape(name) + "\"}, ";
 	payload += "\"description\" :{\"description\" : \"Description of this notification\", "
 			 "\"displayName\" : \"Description\", \"order\" : \"1\","
 			 "\"type\": \"string\", \"default\": \"\"}, "
@@ -1187,7 +1187,7 @@ bool NotificationManager::setupInstance(const string& name,
 		if (rule->init(ruleConfig))
 		{
 			theRule = new NotificationRule(ruleCategoryName,
-						       config.getName(),
+						       notificationName,
 						       rule);
 		}
 
@@ -1200,7 +1200,7 @@ bool NotificationManager::setupInstance(const string& name,
 				deliver->registerIngest((void *)ingestCB, (void *)m_service);
 			}
 			theDelivery = new NotificationDelivery(deliveryCategoryName,
-								config.getName(),
+								notificationName,
 								deliver,
 								customText);
 		}
@@ -1209,11 +1209,11 @@ bool NotificationManager::setupInstance(const string& name,
 		vector<string> children;
 		children.push_back(ruleCategoryName);
 		children.push_back(deliveryCategoryName);
-		m_managerClient->addChildCategories(config.getName(),
+		m_managerClient->addChildCategories(notificationName,
 						    children);
 
 		// Add the new instance
-		this->addInstance(config.getName(),
+		this->addInstance(notificationName,
 				  enabled,
 				  type,
 				  theRule,
@@ -1224,7 +1224,7 @@ bool NotificationManager::setupInstance(const string& name,
 		// Add a new instance without plugins
 		delete deliver;
 		delete rule;
-		this->addInstance(config.getName(),
+		this->addInstance(notificationName,
 				  enabled,
 				  type,
 				  NULL,
@@ -1232,7 +1232,7 @@ bool NotificationManager::setupInstance(const string& name,
 	}
 
 	// Register category for configuration updates
-	m_service->registerCategory(config.getName());
+	m_service->registerCategory(notificationName);
 
 	return true;
 }
