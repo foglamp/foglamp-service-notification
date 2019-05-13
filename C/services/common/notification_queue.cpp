@@ -1162,7 +1162,7 @@ void NotificationQueue::setSumValues(map<string, ResultData>& result,
 
 /**
  * Deliver notification data
- * 
+ *
  * 1) call rule "plugin_eval"
  * 2) check wether notification can be sent
  * 3) call rule "plugin_reason"
