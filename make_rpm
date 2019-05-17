@@ -38,7 +38,7 @@ while getopts ":hca:" opt; do
 			;;
 		a)
 			if [ -d "./archive" ]; then
-				echo -n "Cleaning the package archieve folder..."
+				echo -n "Cleaning the package archive folder..."
 				rm -rf ./archive/*
 				echo "Done."
 			else
