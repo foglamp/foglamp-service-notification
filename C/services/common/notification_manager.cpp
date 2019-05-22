@@ -621,6 +621,16 @@ bool NotificationInstance::handleState(bool evalRet)
 			}
 			else
 			{
+				// Just log
+			}
+		}
+		else
+		{
+			if (evalRet == true)
+			{
+				// Set Triggered 
+				m_state = NotificationState::StateTriggered;
+
 				if ((now - m_lastSent) > DEFAULT_TOGGLE_FREQUENCY)
 				{
 					m_lastSent = now;
@@ -631,17 +641,6 @@ bool NotificationInstance::handleState(bool evalRet)
 				{
 					// Just log
 				}
-			}
-		}
-		else
-		{
-			if (evalRet == true)
-			{
-				// Set Triggered 
-				m_state = NotificationState::StateTriggered;
-				m_lastSent = now;
-				// Notify toggled
-				ret = true;
 			}
 		}
 
@@ -657,6 +656,16 @@ bool NotificationInstance::handleState(bool evalRet)
 			}
 			else
 			{
+				// Just log
+			}
+		}
+		else
+		{
+			if (evalRet == true)
+			{
+				// Set triggered
+				m_state = NotificationState::StateTriggered;
+
 				if ((now - m_lastSent) > DEFAULT_ONESHOT_FREQUENCY)
 				{
 					// Update last sent time
@@ -668,18 +677,6 @@ bool NotificationInstance::handleState(bool evalRet)
 				{
 					// Just log
 				}
-			}
-		}
-		else
-		{
-			if (evalRet == true)
-			{
-				// Set triggered
-				m_state = NotificationState::StateTriggered;
-				// Update last sent time
-				m_lastSent = now;
-				// Send notification
-				ret = true;
 			}
 		}
 		break;
