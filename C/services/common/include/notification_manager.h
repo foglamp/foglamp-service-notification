@@ -19,8 +19,8 @@
 
 // Notification type repeat frequency
 #define DEFAULT_RETRIGGER_FREQUENCY 60
-#define DEFAULT_ONESHOT_FREQUENCY   60
-#define DEFAULT_TOGGLE_FREQUENCY    60
+#define DEFAULT_ONESHOT_FREQUENCY   DEFAULT_RETRIGGER_FREQUENCY
+#define DEFAULT_TOGGLE_FREQUENCY    DEFAULT_RETRIGGER_FREQUENCY
 
 /**
  * The EvaluationType class represents
@@ -209,6 +209,7 @@ class NotificationInstance
 		time_t			m_lastSent;
 		NotificationState	m_state;
 		bool			m_zombie;
+		bool			m_doSend;
 };
 
 typedef NotificationInstance::NotificationType NOTIFICATION_TYPE;

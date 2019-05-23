@@ -160,6 +160,7 @@ NotificationInstance::NotificationInstance(const string& name,
 	// Set initial state for notification delivery
 	m_lastSent = 0;
 	m_state = NotificationInstance::StateCleared;
+	m_doSend = false;
 }
 
 /**
@@ -615,9 +616,14 @@ bool NotificationInstance::handleState(bool evalRet)
 			{
 				// Set cleared
 				m_state = NotificationState::StateCleared;
-				m_lastSent = now;
-				// Notify toggled
-				ret = true;
+
+				if (m_doSend)
+				{
+					m_lastSent = now;
+					m_doSend = false;
+					// Notify toggled
+					ret = true;
+				}
 			}
 			else
 			{
@@ -634,7 +640,8 @@ bool NotificationInstance::handleState(bool evalRet)
 				if ((now - m_lastSent) > DEFAULT_TOGGLE_FREQUENCY)
 				{
 					m_lastSent = now;
-					// Notify triggered
+					m_doSend = true;
+					// Notify toggled
 					ret = true;
 				}
 				else
