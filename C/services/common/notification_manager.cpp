@@ -160,7 +160,7 @@ NotificationInstance::NotificationInstance(const string& name,
 	// Set initial state for notification delivery
 	m_lastSent = 0;
 	m_state = NotificationInstance::StateCleared;
-	m_doSend = false;
+	m_clearSent = false;
 }
 
 /**
@@ -597,6 +597,9 @@ NotificationManager::registerBuiltinRule(const std::string& ruleName)
 /**
  * Check whether a notification can be sent
  *
+ * A notification is sent accordingly to the notification type,
+ * value of "plugin_eval" call and the maximum repeat frequency.
+ *
  * @param    evalRet	Notification data evaluation
  *			via rule "plugin_eval" call
  * @return	True if notification has to be sent or false
@@ -604,127 +607,68 @@ NotificationManager::registerBuiltinRule(const std::string& ruleName)
 bool NotificationInstance::handleState(bool evalRet)
 {	
 	bool ret = false;
-	time_t now = time(NULL);
 	NotificationInstance::NotificationType type = this->getType();
+	time_t repeatFrequency = ((type == NotificationInstance::OneShot) ?
+				  DEFAULT_ONESHOT_FREQUENCY :
+				  DEFAULT_TOGGLE_FREQUENCY);
+	time_t now = time(NULL);
+	time_t diffTime = now - m_lastSent;
 
 	switch(type)
 	{
-	case NotificationInstance::Toggled:
-		if (m_state == NotificationState::StateTriggered)
-		{
-			if (evalRet == false)
-			{
-				// Set cleared
-				m_state = NotificationState::StateCleared;
-
-				if (m_doSend)
-				{
-					m_lastSent = now;
-					m_doSend = false;
-					// Notify toggled
-					ret = true;
-				}
-			}
-			else
-			{
-				// Just log
-			}
-		}
-		else
-		{
-			if (evalRet == true)
-			{
-				// Set Triggered 
-				m_state = NotificationState::StateTriggered;
-
-				if ((now - m_lastSent) > DEFAULT_TOGGLE_FREQUENCY)
-				{
-					m_lastSent = now;
-					m_doSend = true;
-					// Notify toggled
-					ret = true;
-				}
-				else
-				{
-					// Just log
-				}
-			}
-		}
-
-		break;
-	
 	case NotificationInstance::OneShot:
-		if (m_state == NotificationState::StateTriggered)
+	case NotificationInstance::Toggled:
+		if (evalRet)
 		{
-			if (evalRet == false)
+			// This check if for both OneShot and Toggled
+			if (m_state != NotificationState::StateTriggered &&
+		    	    diffTime > repeatFrequency)
 			{
-				// Set cleared
-				m_state = NotificationState::StateCleared;
-			}
-			else
-			{
-				// Just log
+				// Notify triggered
+				ret = true;
+				// Set flag for sending "cleared" notification
+				m_clearSent = type == NotificationInstance::Toggled ? true : false;
 			}
 		}
 		else
 		{
-			if (evalRet == true)
+			// Only for Toggled:
+			// Send notify cleared only if there was a sent "triggered" notification
+			if (type == NotificationInstance::Toggled &&
+			    m_state == NotificationState::StateTriggered &&
+			    m_clearSent)
 			{
-				// Set triggered
-				m_state = NotificationState::StateTriggered;
-
-				if ((now - m_lastSent) > DEFAULT_ONESHOT_FREQUENCY)
-				{
-					// Update last sent time
-					m_lastSent = now;
-					// Send notification
-					ret = true;
-				}
-				else
-				{
-					// Just log
-				}
+				ret = true;
+				// Reset flag for sending "cleared" notification
+				m_clearSent = false;
 			}
 		}
 		break;
 
 	case NotificationInstance::Retriggered:
-		if (evalRet == true)
+		if (evalRet &&
+		    ((m_state != NotificationState::StateTriggered ||
+		     (m_state == NotificationState::StateTriggered &&
+		      (diffTime > DEFAULT_RETRIGGER_FREQUENCY)))))
 		{
-			if (m_state == NotificationState::StateTriggered)
-			{
-				if ((now - m_lastSent) > DEFAULT_RETRIGGER_FREQUENCY)
-				{
-					// Update last sent time
-					m_lastSent = now;
-					// Send notification
-					ret = true;
-				}
-				else
-				{
-					// Just log
-				}
-			}
-			else
-			{
-				// Set triggered
-				m_state = NotificationState::StateTriggered;
-				// Update last sent time
-				m_lastSent = now;
-				// Send notification
-				ret = true;
-			}
+			// Send notification
+			ret = true;
 		}
-		else
-		{
-			// Set cleared state
-			m_state = NotificationState::StateCleared;
-		}
-
 		break;
 
 	default:
 		break;
+	}
+
+	// Set new state
+	m_state = evalRet ?
+		  NotificationState::StateTriggered :
+		  NotificationState::StateCleared;
+
+	// Update last sent time
+	if (ret)
+	{
+		m_lastSent = now;
 	}
 
 	return ret;
@@ -1251,7 +1195,6 @@ bool NotificationInstance::updateInstance(const string& name,
 					  const ConfigCategory& newConfig)
 {
 	bool ret = false;
-
 	bool enabled;
 	string rulePluginName;
 	string deliveryPluginName;

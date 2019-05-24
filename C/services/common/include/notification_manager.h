@@ -209,7 +209,7 @@ class NotificationInstance
 		time_t			m_lastSent;
 		NotificationState	m_state;
 		bool			m_zombie;
-		bool			m_doSend;
+		bool			m_clearSent;
 };
 
 typedef NotificationInstance::NotificationType NOTIFICATION_TYPE;
