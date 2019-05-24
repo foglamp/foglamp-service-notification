@@ -10,3 +10,6 @@ build
 
 # packaging
 packages/build
+
+# rpm packaging build
+archive/

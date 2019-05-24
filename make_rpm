@@ -1,0 +1,219 @@
+#!/bin/bash
+
+##--------------------------------------------------------------------
+## Copyright (c) 2019 Dianomic Systems
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##--------------------------------------------------------------------
+##
+## Author: Massimiliano Pinto
+##
+
+set -e
+
+usage="$(basename "$0") [-a] [-c] [-h]
+This script is used to create the RPM package for the FogLAMP Notification service\
+Arguments:
+ -h	- Display this help text
+ -c	- Remove all the old versions saved in format .XXXX
+ -a	- Remove all the versions, including the last one"
+
+while getopts ":hca:" opt; do
+	case "$opt" in
+		c)
+			echo -n "Cleaning the package archive of older versions..."
+			find "./archive" | grep '.*\.[0-9][0-9][0-9][0-9]' | xargs rm -rf
+			echo "Done."
+			exit 0
+			;;
+		a)
+			if [ -d "./archive" ]; then
+				echo -n "Cleaning the package archive folder..."
+				rm -rf ./archive/*
+				echo "Done."
+			else
+				echo "No archive folder, skipping cleanall"
+			fi
+			exit 0
+			;;
+		h)
+			echo "${usage}"
+			exit 0
+			;;
+		\?)
+			echo "Invalid option -$OPTARG"
+			exit 1
+			;;
+		:)
+			echo "-$OPTARG requires an argument"
+			exit 1
+	esac
+done
+
+# Check if the default directory exists
+echo FOGLAMP_ROOT = ${FOGLAMP_ROOT}
+if [ "${FOGLAMP_ROOT}" = "" ]; then
+    echo "Notification server cannot be compiled: FOGLAMP_ROOT environement variable is not set."
+    echo "Specify the base directory for FogLAMP and set the variable with:"
+    echo "export FOGLAMP_ROOT=<basedir>"
+    exit 1
+fi
+
+if [ ! -d "${FOGLAMP_ROOT}" ]; then
+    echo "Notification server cannot be compiled: ${FOGLAMP_ROOT} is not a valid directory."
+    echo "Specify the base directory for FogLAMP and set the variable with:"
+    echo "export FOGLAMP_ROOT=<basedir>"
+    exit 1
+fi
+
+# Check/set LD_LIBRARY_PATH
+libPathSet=0
+libdir=${FOGLAMP_ROOT}/lib; [ -d ${libdir} ] && LD_LIBRARY_PATH=$(echo $LD_LIBRARY_PATH | sed "s|${libdir}||g") && export LD_LIBRARY_PATH=${libdir}:${LD_LIBRARY_PATH} && libPathSet=1
+libdir=${FOGLAMP_ROOT}/cmake_build/C/lib; [ -d ${libdir} ] && LD_LIBRARY_PATH=$(echo $LD_LIBRARY_PATH | sed "s|${libdir}||g") && export LD_LIBRARY_PATH=${libdir}:${LD_LIBRARY_PATH} && libPathSet=1
+[ "$libPathSet" -eq "0" ] && echo "Unable to set/update LD_LIBRARY_PATH to include path of Foglamp shared libraries: check whether ${FOGLAMP_ROOT}/lib or ${FOGLAMP_ROOT}/cmake_build/C/lib exists" && exit 1
+
+package_manager=rpm
+arch=`arch`
+archive=`pwd`/archive
+if [ ! -d "${archive}/${arch}" ]; then
+	mkdir -p "${archive}/$arch"
+fi
+
+PKG_ROOT=`pwd`
+if [ ! -f packages/RPM/SPECS/service.spec ] ; then
+	echo You must run this script from the root directory
+	exit 1
+fi
+
+GIT_ROOT=`pwd`
+cd ${GIT_ROOT}
+
+if [ ! -f "${GIT_ROOT}/Package" ]; then
+	echo "Package file is missing in ${GIT_ROOT}"
+	exit 1
+fi
+
+if [ ! -f "${GIT_ROOT}/Description" ]; then
+	echo "Description file is missing in ${GIT_ROOT}"
+	exit 1
+fi
+
+. "${GIT_ROOT}"/Package
+pkg_name=${package_name}
+
+if [ -f "${GIT_ROOT}/VERSION" ]; then
+	version=`cat "${GIT_ROOT}/VERSION" | tr -d ' ' | grep "notification_version" | head -1 | sed -e 's/\(.*\)version\([>=|>|<|<=|=]*\)\(.*\)/\3/g'`
+	foglamp_version=`cat ${GIT_ROOT}/foglamp.version| tr -d ' ' | grep 'foglamp_version' | head -1 | sed -e 's/\(.*\)version\([>=|>|<|<=|=]*\)\(.*\)/\2 \3/g'`
+else
+	echo Unable to determine version of package to create
+	exit 1
+fi
+
+BUILD_ROOT="${GIT_ROOT}/packages/build"
+pkg_name="foglamp-${package_name}"
+
+# Final package name
+this_package="${pkg_name}-${version}"
+
+# Print the summary of findings
+echo "The package root directory is                        : ${GIT_ROOT}"
+echo "The FogLAMP service ${package_name} version is  : ${version}"
+echo "The package will be built in                         : ${BUILD_ROOT}"
+echo "The package name is                                  : ${this_package}"
+echo "The FogLAMP required version                         : ${foglamp_version}"
+echo
+
+# Create the package directory. If a directory with the same name exists,
+# it is copied with a version number.
+
+# First, create the BUILD_ROOT folder, if necessary
+if [ ! -L "${BUILD_ROOT}" -a ! -d "${BUILD_ROOT}" ]; then
+    mkdir -p "${BUILD_ROOT}"
+fi
+
+cd "${BUILD_ROOT}"
+existing_pkgs=`find . -maxdepth 1 -name "${this_package}.????" | wc -l`
+existing_pkgs=$((existing_pkgs+1))
+new_stored_pkg=$(printf "${this_package}.%04d" "${existing_pkgs}")
+if [ -d "${this_package}" ]; then
+    echo "Saving the old working environment as ${new_stored_pkg}"
+    mv "${this_package}" "${new_stored_pkg}"
+fi
+mkdir "${this_package}"
+
+# Install directory path
+installs=services
+
+# Populate the package directory with RPM files
+echo -n "Populating the package and updating version file..."
+cd "${this_package}"
+cp -R ${PKG_ROOT}/packages/RPM/* .
+sed -i "s/__VERSION__/${version}/g" SPECS/service.spec
+sed -i "s/__NAME__/${pkg_name}/g" SPECS/service.spec
+sed -i "s/__ARCH__/${arch}/g" SPECS/service.spec
+sed -i "s/__PACKAGE_NAME__/${this_package}/g" SPECS/service.spec
+sed -i "s|__INSTALL_DIR__|${installs}|g" SPECS/service.spec
+sed -i "s/__REQUIRES__/${requirements}/g" SPECS/service.spec
+sed -i "s/foglamp,/foglamp ${foglamp_version},/" SPECS/service.spec
+sed -i "s/foglamp$/foglamp ${foglamp_version}/" SPECS/service.spec
+
+cat > /tmp/sed.script.$$ << EOF
+	/__DESCRIPTION__/ {
+		r ${GIT_ROOT}/Description
+		d
+	}
+EOF
+sed -i -f /tmp/sed.script.$$ SPECS/service.spec
+rm /tmp/sed.script.$$
+
+mkdir BUILDROOT
+cd BUILDROOT
+mkdir -p ${this_package}-1.${arch}
+cd ${this_package}-1.${arch}
+
+mkdir -p usr/local/foglamp
+cd usr/local/foglamp
+(cd ${GIT_ROOT}; 
+if [ -f requirements.sh ]; then
+	sudo ./requirements.sh
+fi
+rm -rf build; mkdir ./build; cd ./build; cmake ..; make)
+mkdir -p services
+cp -R --preserve=links ${GIT_ROOT}/build/C/services/notification/foglamp* "services/"
+echo "Done."
+
+cd ..
+find -L . -type f -exec echo '%{install_path}/'{} \; >> ../../../../SPECS/service.spec
+
+# Build the package
+cd "${BUILD_ROOT}"
+
+echo "Building the new package..."
+rpmbuild --define "_topdir ${BUILD_ROOT}/${this_package}" --noclean -bb ${BUILD_ROOT}/${this_package}/SPECS/service.spec
+echo "Building Complete."
+
+fullname="${this_package}-1.${arch}.rpm"
+
+# Save the old versions
+existing_pkgs=`find ${archive}/${arch} -maxdepth 1 -name "${fullname}.????" | wc -l`
+existing_pkgs=$((existing_pkgs+1))
+new_stored_pkg=$(printf "${fullname}.%04d" "${existing_pkgs}")
+
+if [ -e "${archive}/${arch}/${fullname}" ]; then
+    echo "Saving the old package as ${new_stored_pkg}"
+    mv "${archive}/${arch}/${fullname}" "${archive}/${arch}/${new_stored_pkg}"
+fi
+
+cp ${BUILD_ROOT}/${this_package}/RPMS/${arch}/${fullname} ${archive}/${arch}/${fullname}
+
+exit 0
