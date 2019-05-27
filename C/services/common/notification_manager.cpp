@@ -160,7 +160,6 @@ NotificationInstance::NotificationInstance(const string& name,
 	// Set initial state for notification delivery
 	m_lastSent = 0;
 	m_state = NotificationInstance::StateCleared;
-	m_clearSent = false;
 }
 
 /**
@@ -605,7 +604,8 @@ NotificationManager::registerBuiltinRule(const std::string& ruleName)
  * @return	True if notification has to be sent or false
  */
 bool NotificationInstance::handleState(bool evalRet)
-{	
+{
+	bool setTriggered = false;
 	bool ret = false;
 	NotificationInstance::NotificationType type = this->getType();
 	time_t repeatFrequency = ((type == NotificationInstance::OneShot) ?
@@ -618,58 +618,43 @@ bool NotificationInstance::handleState(bool evalRet)
 	{
 	case NotificationInstance::OneShot:
 	case NotificationInstance::Toggled:
-		if (evalRet)
+		if (m_state == NotificationState::StateTriggered)
 		{
-			// This check if for both OneShot and Toggled
-			if (m_state != NotificationState::StateTriggered &&
-		    	    diffTime > repeatFrequency)
-			{
-				// Notify triggered
-				ret = true;
-				// Set flag for sending "cleared" notification
-				m_clearSent = type == NotificationInstance::Toggled ? true : false;
-			}
+			// Set state depends on evalRet
+			setTriggered = evalRet;
+			// Try sending "cleared" when evaluation is false (Toggled only)
+			ret = !evalRet && (type == NotificationInstance::Toggled);
 		}
 		else
 		{
-			// Only for Toggled:
-			// Send notify cleared only if there was a sent "triggered" notification
-			if (type == NotificationInstance::Toggled &&
-			    m_state == NotificationState::StateTriggered &&
-			    m_clearSent)
-			{
-				ret = true;
-				// Reset flag for sending "cleared" notification
-				m_clearSent = false;
-			}
+			// Try sending "triggered" when evaluation is true
+			ret = evalRet && (diffTime > repeatFrequency);
+			// Here state change depends on sending value
+			setTriggered = ret;
 		}
 		break;
 
 	case NotificationInstance::Retriggered:
-		if (evalRet &&
-		    ((m_state != NotificationState::StateTriggered ||
-		     (m_state == NotificationState::StateTriggered &&
-		      (diffTime > DEFAULT_RETRIGGER_FREQUENCY)))))
-		{
-			// Send notification
-			ret = true;
-		}
+		// Set state depends on evalRet
+		setTriggered = evalRet;
+		// Try sending "triggered" when evaluation is true
+		ret = evalRet && diffTime > repeatFrequency;
 		break;
 
 	default:
 		break;
 	}
 
-	// Set new state
-	m_state = evalRet ?
-		  NotificationState::StateTriggered :
-		  NotificationState::StateCleared;
-
-	// Update last sent time
 	if (ret)
 	{
+		// Update last sent time
 		m_lastSent = now;
 	}
+
+	// Update state
+	m_state = setTriggered ?
+		  NotificationState::StateTriggered :
+		  NotificationState::StateCleared;
 
 	return ret;
 }

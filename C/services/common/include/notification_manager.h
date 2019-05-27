@@ -199,6 +199,7 @@ class NotificationInstance
 		void			setType(NotificationType type) { m_type = type; }; 
 		void			markAsZombie() { m_zombie = true; };
 		bool			isZombie() { return m_zombie; };
+		NotificationState	getState() { return m_state; };
 
 	private:
 		const std::string	m_name;
@@ -209,7 +210,6 @@ class NotificationInstance
 		time_t			m_lastSent;
 		NotificationState	m_state;
 		bool			m_zombie;
-		bool			m_clearSent;
 };
 
 typedef NotificationInstance::NotificationType NOTIFICATION_TYPE;
