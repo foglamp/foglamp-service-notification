@@ -19,8 +19,8 @@
 
 // Notification type repeat frequency
 #define DEFAULT_RETRIGGER_FREQUENCY 60
-#define DEFAULT_ONESHOT_FREQUENCY   60
-#define DEFAULT_TOGGLE_FREQUENCY    60
+#define DEFAULT_ONESHOT_FREQUENCY   DEFAULT_RETRIGGER_FREQUENCY
+#define DEFAULT_TOGGLE_FREQUENCY    DEFAULT_RETRIGGER_FREQUENCY
 
 /**
  * The EvaluationType class represents
@@ -199,6 +199,7 @@ class NotificationInstance
 		void			setType(NotificationType type) { m_type = type; }; 
 		void			markAsZombie() { m_zombie = true; };
 		bool			isZombie() { return m_zombie; };
+		NotificationState	getState() { return m_state; };
 
 	private:
 		const std::string	m_name;
