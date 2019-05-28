@@ -125,12 +125,12 @@ class NotificationQueue
 		void			setSumValues(std::map<std::string, ResultData>& result,
 						    const std::string& key,
 						    DatapointValue& val);
-		void			deliverNotification(NotificationRule* rule,
-							    const std::string& data);
 		void			aggregateData(std::vector<NotificationDataElement *>& readingsData,
 						      unsigned long size,
 						      EvaluationType::EVAL_TYPE type,
-						       std::map<std::string, std::string>& result);
+						      std::map<std::string, std::string>& result);
+		void			setLatestData(vector<NotificationDataElement *>& readingsData,
+						      map<string, AssetData>& results);
 
 	private:
 		/**
@@ -185,18 +185,19 @@ class NotificationQueue
 class ResultData
 {
 	public:
-		std::vector<Datapoint*>
-				vData;
+		std::vector<Datapoint*> vData;
 };
 
 /**
  * This class keeps the string results of an evaluated asset and its datapoints
+ * and a vector or Reading data for Latest evaluation type
  */
 class AssetData
 {
 	public:
 		EvaluationType::EVAL_TYPE
-				type;
-		std::string     sData;
+					type;
+		std::string     	sData;
+		std::vector<Reading*>	rData;
 };
 #endif

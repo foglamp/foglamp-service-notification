@@ -37,6 +37,14 @@ static void worker(NotificationQueue* queue)
 	queue->process();
 }
 
+static void addReadyData(const map<string, string>& readyData,
+			     string& output);
+static void deliverData(NotificationRule* rule,
+			const std::multimap<uint64_t, Reading*>& latestData,
+			const map<string, string>& readyData);
+static void deliverNotification(NotificationRule* rule,
+				const std::string& data);
+
 /**
  * NotificationDataElement construcrtor
  *
@@ -465,6 +473,7 @@ void NotificationQueue::clearBufferData(const std::string& ruleName,
 {
 	NotificationDataBuffer& dataContainer = this->m_ruleBuffers[ruleName];
 	vector<NotificationDataElement*>& data = dataContainer.getData(assetName);
+
 	for (auto it = data.begin();
                   it != data.end();
                   ++it)
@@ -578,24 +587,70 @@ bool NotificationQueue::processDataBuffer(map<string, AssetData>& results,
 void NotificationQueue::evalRule(map<string, AssetData>& results,
 				 NotificationRule* rule)
 {
-	string evalJSON = "{ ";
+	// Output data string for MIN/MAX/AGG/WINDOW
+	map<string, string> JSONOutput;
+	// Points in time data for all Latest assets data
+	std::multimap<uint64_t, Reading*> latestData;
 
+	map<string, bool> assets;
+	// Build output data and Points in time data
 	for (auto mm = results.begin();
 		  mm != results.end();
 		  ++mm)
 	{
-		evalJSON += "\"" + (*mm).first + "\" : ";
-		evalJSON += (*mm).second.sData;
-		if (next(mm, 1) != results.end())
+		if ((*mm).second.type != EvaluationType::EVAL_TYPE::Latest)
 		{
-			evalJSON += ", " ; 	
+			// Set output string
+			JSONOutput[(*mm).first] = (*mm).second.sData;
 		}
+		else
+		{
+			// Get all readings
+			for (auto r = (*mm).second.rData.begin();
+				  r != (*mm).second.rData.end();
+				  ++r)
+			{
+				// Get Reading timestamp with microseconds
+				struct timeval tVal;
+				(*r)->getTimestamp(&tVal);
 
-		// Clean all buffers for Latest:
-		// NOTE:
-		// for other evaluation types we have already removed
-		// the right number of buffers after creating string data
-		// in processAllBuffers()
+				// Add data with microseconds timestamp as key
+				std::pair<uint64_t,  Reading *> rPair =
+					std::make_pair((tVal.tv_sec * 1000000 + tVal.tv_usec), (*r));
+
+				latestData.insert(rPair);
+
+				assets[(*r)->getAssetName()] = true;
+			}
+		}
+	}
+
+	// No latest evaluations found
+	if (!latestData.size())
+	{
+		string evalJSON = "{ ";
+		// No latest
+		addReadyData(JSONOutput, evalJSON);
+
+		evalJSON += " }";
+
+		// Call plugin_eval, plugin_reason and plugin_deliver
+		deliverNotification(rule, evalJSON);
+	}
+	else
+	{
+		// Deliver latest data + ready data
+		deliverData(rule, latestData, JSONOutput);
+	}
+
+	// Clean all buffers for Latest
+	// NOTE:
+	// for other evaluation types we have already removed
+	// the right number of buffers after creating srtring data
+	for (auto mm = results.begin();
+		  mm != results.end();
+		  ++mm)
+	{
 		if ((*mm).second.type == EvaluationType::EVAL_TYPE::Latest)
 		{
 			// Clear all data in buffer buffers[rule][asset]
@@ -603,14 +658,6 @@ void NotificationQueue::evalRule(map<string, AssetData>& results,
 			this->clearBufferData(rule->getName(), (*mm).first);
 		}
 	}
-
-	evalJSON += " }" ; 	
-
-	Logger::getLogger()->debug("evalRule for %s is %s",
-				   rule->getName().c_str(),
-				   evalJSON.c_str());
-	// Call plugin_eval
-	this->deliverNotification(rule, evalJSON);
 }
 
 /**
@@ -690,12 +737,6 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 						*itr);
 		}
 
-		Logger::getLogger()->debug("processDataBuffer for notification %s, "
-					   "asset %s: output result size is %d",
-					   (*it).getNotificationName().c_str(),
-					   assetName.c_str(),
-					   results.size());
-
 		// Eval rule?
 		if (results.size() == assets.size())
 		{
@@ -746,20 +787,14 @@ bool NotificationQueue::processAllReadings(NotificationDetail& info,
 	switch(info.getType())
 	{
 	case EvaluationType::Latest:
-		 // Just process the last buffer
-		{
-		string output = this->processLastBuffer(readingsData.back());
-		if (!output.empty())
-		{
-			// This notification is ready
-			evalRule = true;
+		results[assetName].type = info.getType();
+		// Add all Reading data
+		this->setLatestData(readingsData, results);
 
-			// Update data in the output buffer
-			results[assetName].type = info.getType();
-			results[assetName].sData = output;
-		}
+		// This notification is ready
+		evalRule = true;
+
 		break;
-		}
 
 	case EvaluationType::Minimum:
 	case EvaluationType::Maximum:
@@ -1141,8 +1176,8 @@ void NotificationQueue::setSumValues(map<string, ResultData>& result,
  * @param    data	JSON data to evaluate
  *
  */
-void NotificationQueue::deliverNotification(NotificationRule* rule,
-					    const string& data)
+static void deliverNotification(NotificationRule* rule,
+				const string& data)
 {
 	// Eval notification data via ruel "plugin_eval"
 	bool evalRule = rule->getPlugin()->eval(data);
@@ -1198,7 +1233,9 @@ void NotificationQueue::deliverNotification(NotificationRule* rule,
 	}
 	else
 	{
-		Logger::getLogger()->debug("handle Notification is false, not delivering notification");
+		Logger::getLogger()->debug("Handle state is false for notification "
+					   "'%s': not delivering notifications",
+					   rule->getNotificationName().c_str());
 	}
 }
 
@@ -1253,8 +1290,6 @@ void NotificationQueue::aggregateData(vector<NotificationDataElement *>& reading
 			  ++r)
 		{
 			readingsDone++;
-
-			unsigned long assetTime = (*r)->getTimestamp();
 
 #ifdef QUEUE_DEBUG_DATA
 			assert(assetName.compare((*r)->getAssetName()) == 0);
@@ -1351,5 +1386,137 @@ void NotificationQueue::aggregateData(vector<NotificationDataElement *>& reading
 		default:
 			// Empty result data is returned
 			break;
+	}
+}
+
+/**
+ * Add all the Reading data in the notification rule buffers
+ * into the per asset result map
+ *
+ * @param    readingsData	Vector of data buffers
+ * @param    results		Output result map
+ */
+void NotificationQueue::setLatestData(vector<NotificationDataElement *>& readingsData,
+				      map<string, AssetData>& results)
+{
+
+	for (auto item = readingsData.begin();
+		  item != readingsData.end();
+		   ++item)
+	{
+		const std::vector<Reading *>& readings = (*item)->getData()->getAllReadings();
+		for (auto r = readings.begin();
+			  r != readings.end();
+			  ++r)
+		{
+			results[(*r)->getAssetName()].rData.push_back(*r);
+		}
+	}
+}
+
+/**
+ * Build notification JOSN data for time aggregated data
+ *
+ * @param    readyData		Input map with ready  time aggregated data
+ * @param    output		The output string to pass to plugin_eval
+ */
+void addReadyData(const map<string, string>& readyData,
+		  string& output)
+{
+	// No latest
+	for (auto mm = readyData.begin();
+		  mm != readyData.end();
+		  ++mm)
+	{
+		output += "\"" + (*mm).first + "\" : ";
+		output += (*mm).second;
+		if (next(mm, 1) != readyData.end())
+		{
+			output += ", " ;
+		}
+	}
+}
+
+/**
+ * Deliver Latest notification data and time aggregated data
+ *
+ * Each Latest notification data + time aggregated data
+ * is passed to plugin_eval -> plugin_reason -> plugin_deliver
+ *
+ * @param    rule		The notification rule
+ * @param    latestData		Input vector with all Latest Reading data
+ * @param    readyData		Input map with ready  time aggregated data
+ */
+static void deliverData(NotificationRule* rule,
+			const std::multimap<uint64_t, Reading*>& latestData,
+			const map<string, string>& readyData)
+{
+	map<string, string> values;
+
+	// We have latest data to evaluate
+	string evalJSON = "{ ";
+
+	// Fetch unique timestamp keys
+	for (auto tLine = latestData.begin(), end = latestData.end();
+		  tLine != end;
+		  tLine = latestData.upper_bound(tLine->first))
+	{
+		// Get data
+		auto ret = latestData.equal_range((*tLine).first);
+		// Build output data
+		for (auto eq = ret.first;
+			  eq != ret.second;
+			  ++eq)
+		{
+			// AssetName
+			string assetName = (*eq).second->getAssetName();
+			string assetValue = "\"" + assetName + "\" : { \"";
+
+			// DataPoints
+			std::vector<Datapoint *>& data = (*eq).second->getReadingData();
+			for (auto d = data.begin();
+				  d != data.end();
+				  ++d)
+			{
+				// Datapoint name and val
+				assetValue += (*d)->getName()  + "\" : " + (*d)->getData().toString();
+				if (next(d, 1) != data.end())
+				{
+					assetValue += ", " ;
+				}
+			}
+			// close datapoints
+			assetValue += " }";
+
+			// Save asset value:
+			// if assetName is not found in next point in time
+			// we use this last saved value for the output string.
+			values[assetName] = assetValue;
+		}
+
+		string output = "{ ";
+
+		// Prepare output string
+		for (auto res = values.begin();
+			  res != values.end();
+			  ++res)
+		{
+			output += (*res).second;
+			if (next(res, 1) != values.end())
+			{
+				output += ", " ;
+			}
+		}
+
+		// Add aggreagate data
+		if (readyData.size())
+		{
+			output += ", " ;
+			addReadyData(readyData, output);
+		}
+		output += " }" ;
+
+		// Call plugin_eval, plugin_reason and plugin_deliver
+		deliverNotification(rule, output);
 	}
 }
