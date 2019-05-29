@@ -1470,7 +1470,7 @@ static void deliverData(NotificationRule* rule,
 		{
 			// AssetName
 			string assetName = (*eq).second->getAssetName();
-			string assetValue = "\"" + assetName + "\" : { \"";
+			string assetValue = "\"" + assetName + "\" : { ";
 
 			// DataPoints
 			std::vector<Datapoint *>& data = (*eq).second->getReadingData();
@@ -1479,7 +1479,7 @@ static void deliverData(NotificationRule* rule,
 				  ++d)
 			{
 				// Datapoint name and val
-				assetValue += (*d)->getName()  + "\" : " + (*d)->getData().toString();
+				assetValue += "\"" + (*d)->getName()  + "\" : " + (*d)->getData().toString();
 				if (next(d, 1) != data.end())
 				{
 					assetValue += ", " ;
