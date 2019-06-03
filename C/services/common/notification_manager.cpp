@@ -446,27 +446,27 @@ PLUGIN_HANDLE NotificationManager::loadDeliveryPlugin(const string& loadDelivery
  *			"one shot", "retriggered", "toggled"
  * @return		The NotificationType value
  */
-NOTIFICATION_TYPE NotificationManager::parseType(const string& type)
+E_NOTIFICATION_TYPE NotificationManager::parseType(const string& type)
 {
-	NOTIFICATION_TYPE ret;
+	E_NOTIFICATION_TYPE ret;
 	const char* ptrType = type.c_str();
 
 	if (strcasecmp(ptrType, "one shot") == 0 ||
 	    strcasecmp(ptrType, "oneshot") == 0)
 	{
-		ret = NOTIFICATION_TYPE::OneShot;
+		ret = E_NOTIFICATION_TYPE::OneShot;
 	}
 	else if (strcasecmp(ptrType, "toggled") == 0)
 	{
-		ret = NOTIFICATION_TYPE::Toggled;
+		ret = E_NOTIFICATION_TYPE::Toggled;
 	}
 	else if (strcasecmp(ptrType, "retriggered") == 0)
 	{
-		ret = NOTIFICATION_TYPE::Retriggered;
+		ret = E_NOTIFICATION_TYPE::Retriggered;
 	}
 	else
 	{
-		ret = NOTIFICATION_TYPE::None;
+		ret = E_NOTIFICATION_TYPE::None;
 	}
 	return ret;
 }
@@ -474,21 +474,21 @@ NOTIFICATION_TYPE NotificationManager::parseType(const string& type)
 /**
  * Return string value of NotificationType enum
  *
- * @param    type	The NotificationType value
+ * @param    nType	The NotificationType value
  * @return		String value of NotificationType value
  */
-string NotificationInstance::getTypeString(NOTIFICATION_TYPE type)
+string NotificationInstance::getTypeString(NOTIFICATION_TYPE nType)
 {
 	string ret = "";
-	switch (type)
+	switch (nType.type)
 	{
-		case NOTIFICATION_TYPE::OneShot:
+		case E_NOTIFICATION_TYPE::OneShot:
 			ret = "One Shot";	
 			break;
-		case NOTIFICATION_TYPE::Toggled:
+		case E_NOTIFICATION_TYPE::Toggled:
 			ret = "Toggled";
 			break;
-		case NOTIFICATION_TYPE::Retriggered:
+		case E_NOTIFICATION_TYPE::Retriggered:
 			ret = "Retriggered";
 			break;
 		default:
@@ -607,14 +607,12 @@ bool NotificationInstance::handleState(bool evalRet)
 {
 	bool setTriggered = false;
 	bool ret = false;
-	NotificationInstance::NotificationType type = this->getType();
-	time_t repeatFrequency = ((type == NotificationInstance::OneShot) ?
-				  DEFAULT_ONESHOT_FREQUENCY :
-				  DEFAULT_TOGGLE_FREQUENCY);
+	NOTIFICATION_TYPE nType = this->getType();
+
 	time_t now = time(NULL);
 	time_t diffTime = now - m_lastSent;
 
-	switch(type)
+	switch(nType.type)
 	{
 	case NotificationInstance::OneShot:
 	case NotificationInstance::Toggled:
@@ -623,12 +621,12 @@ bool NotificationInstance::handleState(bool evalRet)
 			// Set state depends on evalRet
 			setTriggered = evalRet;
 			// Try sending "cleared" when evaluation is false (Toggled only)
-			ret = !evalRet && (type == NotificationInstance::Toggled);
+			ret = !evalRet && (nType.type == E_NOTIFICATION_TYPE::Toggled);
 		}
 		else
 		{
 			// Try sending "triggered" when evaluation is true
-			ret = evalRet && (diffTime > repeatFrequency);
+			ret = evalRet && (diffTime > nType.retriggerTime);
 			// Here state change depends on sending value
 			setTriggered = ret;
 		}
@@ -638,7 +636,7 @@ bool NotificationInstance::handleState(bool evalRet)
 		// Set state depends on evalRet
 		setTriggered = evalRet;
 		// Try sending "triggered" when evaluation is true
-		ret = evalRet && diffTime > repeatFrequency;
+		ret = evalRet && diffTime > nType.retriggerTime;
 		break;
 
 	default:
@@ -806,19 +804,23 @@ bool NotificationManager::APIcreateEmptyInstance(const string& name)
 	payload += "\"description\" :{\"description\" : \"Description of this notification\", "
 			 "\"displayName\" : \"Description\", \"order\" : \"1\","
 			 "\"type\": \"string\", \"default\": \"\"}, "
-			 "\"rule\" : {\"description\": \"Rule to evaluate\", "
+		   "\"rule\" : {\"description\": \"Rule to evaluate\", "
 			 "\"displayName\" : \"Rule\", \"order\" : \"2\","
 			 "\"type\": \"string\", \"default\": \"\"}, "
-			 "\"channel\": {\"description\": \"Channel to send alert on\", "
+		   "\"channel\": {\"description\": \"Channel to send alert on\", "
 			 "\"displayName\" : \"Channel\", \"order\" : \"3\","
 			 "\"type\": \"string\", \"default\": \"\"}, "
-			 "\"notification_type\": {\"description\": \"Type of notification\", \"type\": "
+		   "\"notification_type\": {\"description\": \"Type of notification\", \"type\": "
 			 "\"enumeration\", \"options\": [ \"one shot\", \"retriggered\", \"toggled\" ], "
 			 "\"displayName\" : \"Type\", \"order\" : \"4\","
 			 "\"default\" : \"one shot\"}, "
-			 "\"enable\": {\"description\" : \"Enabled\", "
+		   "\"enable\": {\"description\" : \"Enabled\", "
 			 "\"displayName\" : \"Enabled\", \"order\" : \"5\","
-			 "\"type\": \"boolean\", \"default\": \"false\"}}";
+			 "\"type\": \"boolean\", \"default\": \"false\"}, " 
+		   "\"retrigger_time\": {\"description\" : \"Retrigger time in seconds for sending a new notification.\", "
+			 "\"displayName\" : \"Retrigger Time\", \"order\" : \"6\", "
+			 "\"type\": \"integer\",  \"default\": \"" + to_string(DEFAULT_RETRIGGER_TIME) + "\"} }";
+
 
 	DefaultConfigCategory notificationConfig(name, payload);
 	notificationConfig.setDescription("Notification " + name);
@@ -826,10 +828,13 @@ bool NotificationManager::APIcreateEmptyInstance(const string& name)
 	// Don't update any existing configuration, just replace all 
 	if (m_managerClient->addCategory(notificationConfig, false))
 	{
+		NOTIFICATION_TYPE type;
+		type.retriggerTime = DEFAULT_RETRIGGER_TIME;
+		type.type = E_NOTIFICATION_TYPE::OneShot;
 		// Create the empty Notification instance
 		this->addInstance(name,
 				  false,
-				  NOTIFICATION_TYPE::OneShot,
+				  type,
 				  NULL,
 				  NULL);
 
@@ -1429,7 +1434,7 @@ void NotificationManager::collectZombies()
  * @param    enabled			Enable output parameter.
  * @param    rulePluginName		The rule plugin output parameter.
  * @param    deliveryPluginName		The delivery plugin output parameter.
- * @param    type			The notification type output parameter.
+ * @param    nType			The notification type output parameter.
  * @param    customText			The custom text output parameter.
  * @return				True is configuration parsing succeded,
  *					false otherwise.
@@ -1438,9 +1443,10 @@ bool NotificationManager::getConfigurationItems(const ConfigCategory& config,
 						bool& enabled,
 						string& rulePluginName,
 						string& deliveryPluginName,
-						NOTIFICATION_TYPE& type,
+						NOTIFICATION_TYPE& nType,
 						string& customText)
 {
+	long retriggerTime = DEFAULT_RETRIGGER_TIME;
 	string notificationName = config.getName();
 	// The rule plugin to use
 	rulePluginName = config.getValue("rule");
@@ -1449,6 +1455,18 @@ bool NotificationManager::getConfigurationItems(const ConfigCategory& config,
 	// Is it enabled?
 	enabled = config.getValue("enable").compare("true") == 0 ||
 		  config.getValue("enable").compare("True") == 0;
+
+	// Re-trigger time
+	if (config.itemExists("retrigger_time") &&
+	    !config.getValue("retrigger_time").empty())
+	{
+		long new_value = atol(config.getValue("retrigger_time").c_str());
+		if (new_value)
+		{
+			retriggerTime = new_value;
+		}
+	}
+	nType.retriggerTime = retriggerTime;
 
 	// Get notification type
 	string notification_type;
@@ -1464,8 +1482,8 @@ bool NotificationManager::getConfigurationItems(const ConfigCategory& config,
 				notificationName + "' configuration.");
 		return false;
 	}
-	type = this->parseType(notification_type);
-	if (type == NOTIFICATION_TYPE::None)
+	nType.type = this->parseType(notification_type);
+	if (nType.type == E_NOTIFICATION_TYPE::None)
 	{
 		m_logger->fatal("Found unsupported Notification type '" + \
 				notification_type + \
