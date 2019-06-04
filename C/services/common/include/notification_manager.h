@@ -17,10 +17,8 @@
 #include <notification_service.h>
 #include <notification_stats.h>
 
-// Notification type repeat frequency
-#define DEFAULT_RETRIGGER_FREQUENCY 60
-#define DEFAULT_ONESHOT_FREQUENCY   DEFAULT_RETRIGGER_FREQUENCY
-#define DEFAULT_TOGGLE_FREQUENCY    DEFAULT_RETRIGGER_FREQUENCY
+// Notification type repeat time
+#define DEFAULT_RETRIGGER_TIME 60
 
 /**
  * The EvaluationType class represents
@@ -164,7 +162,12 @@ class NotificationDelivery : public NotificationElement
 class NotificationInstance
 {
 	public:
-		enum NotificationType { None, OneShot, Retriggered, Toggled };
+		enum eNotificationType { None, OneShot, Retriggered, Toggled };
+		struct NotificationType
+		{
+			eNotificationType type;
+			long retriggerTime;
+		};
 		enum NotificationState {StateTriggered, StateCleared };
 		NotificationInstance(const std::string& name,
 				     bool enable,
@@ -213,6 +216,7 @@ class NotificationInstance
 };
 
 typedef NotificationInstance::NotificationType NOTIFICATION_TYPE;
+typedef NotificationInstance::eNotificationType E_NOTIFICATION_TYPE;
 typedef std::function<RulePlugin*(const std::string&)> BUILTIN_RULE_FN;
 
 class NotificationManager
@@ -231,13 +235,13 @@ class NotificationManager
 		std::map<std::string, NotificationInstance *>&
 					getInstances() { return m_instances; };
 		NotificationInstance*	getNotificationInstance(const std::string& instanceName) const;
-		NOTIFICATION_TYPE	parseType(const std::string& type);
+		E_NOTIFICATION_TYPE	parseType(const std::string& type);
 		std::string		getJSONRules();
 		std::string		getJSONDelivery();
 		bool			APIcreateEmptyInstance(const std::string& name);
 		RulePlugin*		createRuleCategory(const std::string& name,
 							   const std::string& rule);
-		 DeliveryPlugin*	createDeliveryCategory(const std::string& name,
+		DeliveryPlugin*		createDeliveryCategory(const std::string& name,
 							       const std::string& delivery);
 		std::string		getPluginInfo(PLUGIN_INFORMATION* info);
 		bool			createInstance(const std::string& name,

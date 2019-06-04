@@ -12,11 +12,14 @@ TEST(NotificationService, AddInstance)
 	long oneshot = 0;
 	long retriggered = 0;
 	NotificationInstance* instance = NULL;
+	NOTIFICATION_TYPE nType;
+	nType.type = E_NOTIFICATION_TYPE::Toggled;
+	nType.retriggerTime = DEFAULT_RETRIGGER_TIME;
 
 	// NotificationType is TOGGLED
 	instance = new NotificationInstance("Toggled",
 					    false,
-					    NotificationInstance::Toggled,
+					    nType,
 					    NULL,
 					    NULL);
 	for (int i = 0; i < 10; i++)
@@ -49,9 +52,10 @@ TEST(NotificationService, AddInstance)
 	}
 
 	// NotificationType is ONE SHOT
+	nType.type = E_NOTIFICATION_TYPE::OneShot;
 	instance = new NotificationInstance("OneShot",
 					    false,
-					    NotificationInstance::OneShot,
+					    nType,
 					    NULL,
 					    NULL);
 
@@ -87,10 +91,11 @@ TEST(NotificationService, AddInstance)
 		delete instance;
 	}
 
-	// NotificationType is ONE SHOT
+	// NotificationType is retriggered
+	nType.type = E_NOTIFICATION_TYPE::Retriggered;
 	instance = new NotificationInstance("Retriggered",
 					    false,
-					    NotificationInstance::Retriggered,
+					    nType,
 					    NULL,
 					    NULL);
 	ret = instance->handleState(true);
