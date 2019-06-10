@@ -7,6 +7,7 @@ using namespace std;
 
 TEST(NotificationService, CallbackUrl)
 {
+EXPECT_EXIT({
 	string myName = "myName";
 
 	NotificationApi* api = new NotificationApi(0, 1);
@@ -16,4 +17,6 @@ TEST(NotificationService, CallbackUrl)
 	api->stop();
 
 	delete api;
+
+	exit(0); }, ::testing::ExitedWithCode(0), "");
 }

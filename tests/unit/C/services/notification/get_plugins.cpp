@@ -8,6 +8,7 @@ using namespace std;
 
 TEST(NotificationService, GetPlugins)
 {
+EXPECT_EXIT({
 	string myName = "myName";
 
 	ManagementClient* managerClient = new ManagementClient("0.0.0.0", 0);
@@ -54,4 +55,6 @@ TEST(NotificationService, GetPlugins)
 	}
 
 	delete managerClient;
+
+	exit(0); }, ::testing::ExitedWithCode(0), "");
 }

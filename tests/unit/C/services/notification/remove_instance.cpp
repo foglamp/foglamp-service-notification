@@ -7,6 +7,7 @@ using namespace std;
 
 TEST(NotificationService, RemoveInstance)
 {
+EXPECT_EXIT({
 	string myName = "myName";
 
 	ManagementClient* managerClient = new ManagementClient("0.0.0.0", 0);
@@ -25,4 +26,6 @@ TEST(NotificationService, RemoveInstance)
 
         delete managerClient;
 	delete api;
+
+	exit(0); }, ::testing::ExitedWithCode(0), "");
 }
