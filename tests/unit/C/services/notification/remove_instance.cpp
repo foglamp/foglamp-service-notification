@@ -13,19 +13,25 @@ EXPECT_EXIT({
 	ManagementClient* managerClient = new ManagementClient("0.0.0.0", 0);
 	NotificationManager instances(myName, managerClient, NULL);
 
-	ASSERT_EQ(0, instances.getInstances().size());
-	string allInstances = "{ \"notifications\": [" + instances.getJSONInstances()  + "] }";
-
-	ASSERT_EQ(0, instances.getJSONInstances().compare(""));
-
-	NotificationApi* api = new NotificationApi(0, 1);
-
-	ASSERT_EQ(false, api->removeNotification("NOT_EXISTANT"));
-
-	api->stop();
+	bool ret = instances.getInstances().size() == 1;
+	if (ret)
+	{
+		string allInstances = "{ \"notifications\": [" + instances.getJSONInstances()  + "] }";
+		ret = instances.getJSONInstances().compare("") == 0;
+		if (ret)
+		{
+			NotificationApi* api = new NotificationApi(0, 1);
+			ret = api->removeNotification("NOT_EXISTANT") == false;
+			api->stop();
+			delete api;
+		}
+	}
+	else
+	{
+		cerr << "instances.getInstances() is not 0" << endl;
+	}
 
         delete managerClient;
-	delete api;
 
-	exit(0); }, ::testing::ExitedWithCode(0), "");
+	exit(!(ret == true)); }, ::testing::ExitedWithCode(0), "");
 }
