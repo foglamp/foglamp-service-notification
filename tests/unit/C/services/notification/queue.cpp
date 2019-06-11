@@ -10,6 +10,7 @@ using namespace std;
  */
 TEST(NotificationService, Queue)
 {
+EXPECT_EXIT({
 	string myName = "myName";
 
 	NotificationApi* api = new NotificationApi(0, 1);
@@ -27,4 +28,6 @@ TEST(NotificationService, Queue)
 
 	delete queue;
 	delete api;
+
+	exit(0); }, ::testing::ExitedWithCode(0), "");
 }

@@ -7,6 +7,7 @@ using namespace std;
 
 TEST(NotificationService, Instances)
 {
+EXPECT_EXIT({
 	string myName = "myName";
 
 	ManagementClient* managerClient = new ManagementClient("0.0.0.0", 0);
@@ -18,4 +19,6 @@ TEST(NotificationService, Instances)
 	ASSERT_EQ(0, instances.getJSONInstances().compare(""));
 
 	delete managerClient;
+
+	exit(0); }, ::testing::ExitedWithCode(0), "");
 }

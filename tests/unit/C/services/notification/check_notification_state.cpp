@@ -7,6 +7,7 @@ using namespace std;
 
 TEST(NotificationService, AddInstance)
 {
+EXPECT_EXIT({
 	bool ret = false;
 	long toggled = 0;
 	long oneshot = 0;
@@ -152,4 +153,5 @@ TEST(NotificationService, AddInstance)
 		delete instance;
 	}
 
+	exit(0); }, ::testing::ExitedWithCode(0), "");
 }
