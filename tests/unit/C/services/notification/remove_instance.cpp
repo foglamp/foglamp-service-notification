@@ -22,6 +22,10 @@ EXPECT_EXIT({
 		{
 			NotificationApi* api = new NotificationApi(0, 1);
 			ret = api->removeNotification("NOT_EXISTANT") == false;
+			if (!ret)
+			{
+				cerr << "remove not existant notification instance has failed" << endl;
+			}
 			api->stop();
 			delete api;
 		}

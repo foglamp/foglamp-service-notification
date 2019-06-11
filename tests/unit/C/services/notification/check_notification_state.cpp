@@ -40,17 +40,27 @@ EXPECT_EXIT({
 	// This doesn't change the state within repeat frequency period
 	ret = instance->handleState(true);
 
-	// Check state is still StateCleared and rert is false (notification can not be sent)
-	ASSERT_TRUE(instance->getState() == NotificationInstance::StateCleared && !ret);
+	// Check state is still StateCleared and ret is false (notification can not be sent)
+	bool testStatus = instance->getState() == NotificationInstance::StateCleared && !ret;
+	if (!testStatus)
+	{
+		cerr << "Toggled Notification should not be sent" << endl;
+		delete instance;
+		exit(1);
+	}
 
 	// We have onky two toggled messages to send, within repeat frequency period
-	ASSERT_EQ(toggled, 2);
+	testStatus = toggled == 2;
+
+	if (!testStatus)
+	{
+		cerr << "We have " << toggled << " toggled messages instead of 2" << endl;
+		delete instance;
+		exit(1);
+	}
 
 	// Remove this instance
-	if (instance)
-	{
-		delete instance;
-	}
+	delete instance;
 
 	// NotificationType is ONE SHOT
 	nType.type = E_NOTIFICATION_TYPE::OneShot;
@@ -61,7 +71,14 @@ EXPECT_EXIT({
 					    NULL);
 
 	ret = instance->handleState(true);
-	ASSERT_TRUE(instance->getState() == NotificationInstance::StateTriggered && ret);
+	testStatus = instance->getState() == NotificationInstance::StateTriggered && ret;
+	if (!testStatus)
+	{
+		cerr << "OneShot Notification should be sent" << endl;
+		delete instance;
+		exit(1);
+	}
+
 	if (instance->getState() == NotificationInstance::StateTriggered && ret)
 	{
 		oneshot++;
@@ -75,22 +92,43 @@ EXPECT_EXIT({
 			oneshot++;
 		}
 	}
-	ASSERT_EQ(oneshot, 1);
-
-	ret = instance->handleState(true);
-	ASSERT_TRUE(instance->getState() == NotificationInstance::StateTriggered && !ret);
-
-	ret = instance->handleState(false);
-	ASSERT_TRUE(instance->getState() == NotificationInstance::StateCleared && !ret);
-
-	ret = instance->handleState(true);
-	ASSERT_TRUE(instance->getState() == NotificationInstance::StateCleared && !ret);
-
-	// Remove this instance
-	if (instance)
+	testStatus = oneshot == 1;
+	if (!testStatus)
 	{
 		delete instance;
+		cerr << "We have " << oneshot << " oneshot messages instead of 1" << endl;
+		exit(1);
 	}
+
+	ret = instance->handleState(true);
+	testStatus = instance->getState() == NotificationInstance::StateTriggered && !ret;
+	if (!testStatus)
+	{
+		cerr << "OneShot Notification should not be sent" << endl;
+		delete instance;
+		exit(1);
+	}
+
+	ret = instance->handleState(false);
+	testStatus = instance->getState() == NotificationInstance::StateCleared && !ret;
+	if (!testStatus)
+	{
+		cerr << "OneShot Notification should not be sent" << endl;
+		delete instance;
+		exit(1);
+	}
+
+	ret = instance->handleState(true);
+	testStatus = instance->getState() == NotificationInstance::StateCleared && !ret;
+	if (!testStatus)
+	{
+		cerr << "OneShot Notification should not be sent" << endl;
+		delete instance;
+		exit(1);
+	}
+
+	// Remove this instance
+	delete instance;
 
 	// NotificationType is retriggered
 	nType.type = E_NOTIFICATION_TYPE::Retriggered;
@@ -105,7 +143,13 @@ EXPECT_EXIT({
 		retriggered++;
 	}
 	// First time StateTriggered, send Notification
-	ASSERT_TRUE(instance->getState() == NotificationInstance::StateTriggered && ret);
+	testStatus = instance->getState() == NotificationInstance::StateTriggered && ret;
+	if (!testStatus)
+	{
+		cerr << "Retriggered Notification should be sent" << endl;
+		delete instance;
+		exit(1);
+	}
 
 	// Loop with evaluations set to true
 	for (int i = 0; i < 10; i++)
@@ -117,7 +161,13 @@ EXPECT_EXIT({
 		}
 	}
 	// Do not send notifications, within repeat frequency period
-	ASSERT_TRUE(instance->getState() == NotificationInstance::StateTriggered && !ret);
+	testStatus = instance->getState() == NotificationInstance::StateTriggered && !ret;
+	if (!testStatus)
+	{
+		cerr << "Retriggered Notification should not be sent" << endl;
+		delete instance;
+		exit(1);
+	}
 
 	// Check result after some some evaluations set to true and false
 	for (int i = 0; i < 10; i++)
@@ -135,8 +185,20 @@ EXPECT_EXIT({
 	}
 
 	// Final state after loop is StateCleared
-	ASSERT_TRUE(instance->getState() == NotificationInstance::StateCleared && !ret);
-	ASSERT_EQ(retriggered, 1);
+	testStatus = instance->getState() == NotificationInstance::StateCleared && !ret;
+	if (!testStatus)
+	{
+		cerr << "Retriggered Notification should not be sent" << endl;
+		delete instance;
+		exit(1);
+	}
+	testStatus = retriggered == 1;	
+	if (!testStatus)
+	{
+		cerr << "We have " << retriggered << " retriggered messages instead of 1" << endl;
+		delete instance;
+		exit(1);
+	}
 
 	// Loop with evaluations set to true
 	for (int i = 0; i < 10; i++)
@@ -145,13 +207,16 @@ EXPECT_EXIT({
 	}
 
 	// Do not send notifications, within repeat frequency period
-	ASSERT_TRUE(instance->getState() == NotificationInstance::StateTriggered && !ret);
-
-	// Remove this instance
-	if (instance)
+	testStatus = instance->getState() == NotificationInstance::StateTriggered && !ret;
+	if (!testStatus)
 	{
+		cerr << "Retriggered Notification should not be sent" << endl;
 		delete instance;
+		exit(1);
 	}
 
-	exit(0); }, ::testing::ExitedWithCode(0), "");
+	// Remove this instance
+	delete instance;
+
+	exit(!(testStatus == true)); }, ::testing::ExitedWithCode(0), "");
 }
