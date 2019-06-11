@@ -13,7 +13,7 @@ EXPECT_EXIT({
 	ManagementClient* managerClient = new ManagementClient("0.0.0.0", 0);
 	NotificationManager instances(myName, managerClient, NULL);
 
-	bool ret = instances.getInstances().size() == 1;
+	bool ret = instances.getInstances().size() == 0;
 	if (ret)
 	{
 		string allInstances = "{ \"notifications\": [" + instances.getJSONInstances()  + "] }";
