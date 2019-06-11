@@ -15,15 +15,26 @@ EXPECT_EXIT({
 	NotificationManager instances(myName, managerClient, NULL);
 
 	// Check for embedded OverMaxRule rule plugin
-	ASSERT_TRUE(instances.getJSONRules().find("OverMaxRule") != string::npos);
+	bool ret = instances.getJSONRules().find("OverMaxRule") != string::npos;
+	if (!ret)
+	{
+		delete managerClient;
+		cerr << "Embedded OverMaxRule rule plugin not found" << endl;
+		exit(1);
+	}
 
-	// If FOGLAMP_ROOT is set we should have some delivery plugins
+	// If FOGLAMP_ROOT is not set we should no delivery plugins
 	if (!getenv("FOGLAMP_ROOT"))
 	{
-		ASSERT_EQ(0, instances.getJSONDelivery().compare("{}"));
+		ret = instances.getJSONDelivery().compare("[]") == 0;
+		if (!ret)
+		{
+			cerr << "Delivery plugin array must be empty without FOGLAMP_ROOT" << endl;
+		}
 	}
 	else
 	{
+		// If FOGLAMP_ROOT is set we should have some delivery plugins
 		string deliveryPluginDir(getenv("FOGLAMP_ROOT"));
 		deliveryPluginDir += "/plugins/notificationDelivery";
 		DIR* dir = opendir(deliveryPluginDir.c_str());
@@ -45,16 +56,24 @@ EXPECT_EXIT({
 		if (pluginsFound)
 		{
 			// Check array is NOT empty
-			ASSERT_TRUE(instances.getJSONDelivery().compare("[]") != 0);
+			ret = instances.getJSONDelivery().compare("[]") != 0;
+			if (!ret)
+			{
+				cerr << "Delivery plugin array can not be empty with found plugins" << endl;
+			}
 		}
 		else
 		{
 			// Check array must be empty
-			ASSERT_TRUE(instances.getJSONDelivery().compare("[]") == 0);
+			ret = instances.getJSONDelivery().compare("[]") == 0;
+			if (!ret)
+			{
+				cerr << "Delivery plugin array has to be empty without found plugins" << endl;
+			}
 		}
 	}
 
 	delete managerClient;
 
-	exit(0); }, ::testing::ExitedWithCode(0), "");
+	exit(!(ret == true)); }, ::testing::ExitedWithCode(0), "");
 }
