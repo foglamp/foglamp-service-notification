@@ -46,8 +46,11 @@ if [[ ( $os_name == *"Red Hat"* || $os_name == *"CentOS"* ) &&  $os_version == *
 	sudo yum install -y cmake
 	sudo yum install -y libuuid-devel
 
-	# A gcc version newer than 4.9.0 is needed as FogLAMP core services are built with gcc 7.3.1
+	# A gcc version newer than 4.9.0 is needed to properly use <regex>
 	# the installation of these packages will not overwrite the previous compiler
+	# the new one will be available using the command 'source scl_source enable devtoolset-7'
+	# the previous gcc will be enabled again after a log-off/log-in.
+	#
 	sudo yum install -y yum-utils
 	sudo yum-config-manager --enable rhel-server-rhscl-7-rpms
 	sudo yum install -y devtoolset-7

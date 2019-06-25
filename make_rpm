@@ -185,9 +185,16 @@ mkdir -p usr/local/foglamp
 cd usr/local/foglamp
 (cd ${GIT_ROOT}; 
 if [ -f requirements.sh ]; then
-	sudo ./requirements.sh
+	./requirements.sh
 fi
-rm -rf build; mkdir ./build; cd ./build; cmake ..; make)
+
+if [ -f build.sh ]; then
+	rm -rf build;
+	./build.sh
+else
+	rm -rf build; mkdir ./build; cd ./build; cmake ..; make
+fi)
+
 mkdir -p services
 cp -R --preserve=links ${GIT_ROOT}/build/C/services/notification/foglamp* "services/"
 echo "Done."
