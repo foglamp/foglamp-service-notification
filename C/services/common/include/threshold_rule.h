@@ -1,13 +1,13 @@
-#ifndef _UNDERMIN_RULE_H
-#define _UNDERMIN_RULE_H
+#ifndef _THRESHOLD_RULE_H
+#define _THRESHOLD_RULE_H
 /*
- * FogLAMP UnderMin builtin notification rule.
+ * FogLAMP Threshold builtin notification rule.
  *
- * Copyright (c) 2019 Dianomic Systems
+ * Copyright (c) 2018 Dianomic Systems
  *
  * Released under the Apache 2.0 Licence
  *
- * Author: Mark Riddoch
+ * Author: Massimiliano Pinto
  */
 #include <plugin.h>
 #include <plugin_manager.h>
@@ -15,14 +15,21 @@
 #include <rule_plugin.h>
 #include <builtin_rule.h>
 
+typedef enum {
+	THRESHOLD_GREATER,
+	THRESHOLD_GREATER_EQUAL,
+	THRESHOLD_LESS,
+	THRESHOLD_LESS_EQUAL
+} ThresholdCondition;
+
 /**
- * UnderMinRule, derived from RulePlugin, is a builtin rule object
+ * ThresholdRule, derived from RulePlugin, is a builtin rule object
  */
-class UnderMinRule : public RulePlugin
+class ThresholdRule : public RulePlugin
 {
 	public:
-		UnderMinRule(const std::string& name);
-	        ~UnderMinRule();
+		ThresholdRule(const std::string& name);
+	        ~ThresholdRule();
 
 		PLUGIN_HANDLE		init(const ConfigCategory& config);
 		void			shutdown();
@@ -38,6 +45,8 @@ class UnderMinRule : public RulePlugin
 						  RuleTrigger* rule);
 		bool			checkLimit(const Value& point,
 						   double limitValue);
+	private:
+		ThresholdCondition	m_condition;
 };
 
 #endif
