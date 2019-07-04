@@ -14,12 +14,12 @@ EXPECT_EXIT({
 	ManagementClient* managerClient = new ManagementClient("0.0.0.0", 0);
 	NotificationManager instances(myName, managerClient, NULL);
 
-	// Check for embedded OverMaxRule rule plugin
-	bool ret = instances.getJSONRules().find("OverMaxRule") != string::npos;
+	// Check for embedded Threshold rule plugin
+	bool ret = instances.getJSONRules().find("Threshold") != string::npos;
 	if (!ret)
 	{
 		delete managerClient;
-		cerr << "Embedded OverMaxRule rule plugin not found" << endl;
+		cerr << "Embedded Threshold rule plugin not found" << endl;
 		exit(1);
 	}
 
