@@ -20,8 +20,7 @@
 #include <delivery_plugin.h>
 #include <string.h>
 #include "plugin_api.h"
-#include <overmax_rule.h>
-#include <undermin_rule.h>
+#include <threshold_rule.h>
 #include <notification_subscription.h>
 #include <notification_queue.h>
 #include <reading.h>
@@ -214,8 +213,7 @@ NotificationManager::NotificationManager(const std::string& serviceName,
 	/**
 	 * Add here all the builtin rules we want to make available:
 	 */
-	this->registerBuiltinRule<OverMaxRule>("OverMaxRule");
-	this->registerBuiltinRule<UnderMinRule>("UnderMinRule");
+	this->registerBuiltinRule<ThresholdRule>("Threshold");
 
 	// Register statistics
 	ManagementApi *management = ManagementApi::getInstance();
@@ -580,7 +578,7 @@ RulePlugin* NotificationManager::findBuiltinRule(const string& ruleName)
  * Register a builtin rule class, derived form RulePlugin class
  *
  * Call this routine with the class name T and its "string" name:
- * registerBuiltinRule<OverMaxRule>("OverMaxRule");
+ * registerBuiltinRule<ThresholdRule>("Threshold");
  *
  * @param   ruleName	The built in rule name
  */
