@@ -24,17 +24,17 @@
  * The EvaluationType class represents
  * the evalutation type of notification data.
  *
- * Supported directives:  Window, Average, Minimum, Maximum
+ * Supported directives:  All, Average, Minimum, Maximum
  * with the specified time period
- * and Latest (without time indication)
+ * and Single Item (without time indication)
  * These informations come from "plugin_triggers" call.
  */
 class EvaluationType
 {
 	public:
 		typedef enum EvalType {
-			Latest,
-			Window,
+			SingleItem,
+			All,
 			Average,
 			Minimum,
 			Maximum

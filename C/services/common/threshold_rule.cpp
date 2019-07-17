@@ -66,20 +66,28 @@ static const char *default_config = QUOTE({
 				"displayName" : "Trigger value",
 				"order": "5"
 				},
-			"evaluation_type": {
-				"description": "The rule evaluation type", 
+			"evaluation_data": {
+				"description": "The rule evaluation data: single item or window", 
 				"type": "enumeration",
-				"options": [ "window", "maximum", "minimum", "average", "latest" ],
-				"default" : "latest",
-				"displayName" : "Evaluation type",
+				"options": [ "Single Item", "Window"],
+				"default" : "Single Item",
+				"displayName" : "Evaluation data",
 				"order": "6"
 				},
+			"window_data": {
+				"description": "Window data evaluation type",
+				"type": "enumeration",
+				"options": [ "Maximum", "Minimum", "Average"],
+				"default" : "Average",
+				"displayName" : "Window evaluation",
+				"order": "7"
+				},
 			"time_window" : {
-				"description": "Duration of the time window, in seconds, for collecting data points except for 'latest' evaluation.",
+				"description": "Duration of the time window, in seconds, for collecting data points",
 				"type": "integer",
 				"default": DEFAULT_TIME_INTERVAL, 
 				"displayName" : "Time window",
-				"order": "7"
+				"order": "8"
 				}
 	});
 
@@ -413,22 +421,27 @@ void ThresholdRule::configure(const ConfigCategory& config)
 	if (!assetName.empty() &&
 	    !dataPointName.empty())
 	{
-		// evaluation_type can be empty, it means latest value
-		string evaluation_type;
+		// evaluation_type can be empty, it means SingleItem values
+		string evaluation_data;
 		// time_window might be not present only
 		// if evaluation_type is empty
 		unsigned int timeInterval = atoi(DEFAULT_TIME_INTERVAL);
 
-		if (config.itemExists("evaluation_type"))
+		if (config.itemExists("evaluation_data"))
 		{
-			evaluation_type = config.getValue("evaluation_type");
-			if (evaluation_type.compare("latest") == 0)
+			evaluation_data = config.getValue("evaluation_data");
+			if (evaluation_data.compare("Single Item") == 0)
 			{
-				evaluation_type.clear();
+				evaluation_data.clear();
 				timeInterval = 0;
 			}
 			else
 			{
+				if (config.itemExists("window_data"))
+				{
+					evaluation_data = config.getValue("window_data");
+				}
+
 				if (config.itemExists("time_window"))
 				{
 					timeInterval = atoi(config.getValue("time_window").c_str());
@@ -442,7 +455,7 @@ void ThresholdRule::configure(const ConfigCategory& config)
 			DatapointValue value(maxVal);
 			Datapoint* point = new Datapoint(dataPointName, value);
 			RuleTrigger* pTrigger = new RuleTrigger(dataPointName, point);
-			pTrigger->addEvaluation(evaluation_type,
+			pTrigger->addEvaluation(evaluation_data,
 						timeInterval,
 						false);
 

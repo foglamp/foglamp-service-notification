@@ -129,8 +129,8 @@ class NotificationQueue
 						      unsigned long size,
 						      EvaluationType::EVAL_TYPE type,
 						      std::map<std::string, std::string>& result);
-		void			setLatestData(vector<NotificationDataElement *>& readingsData,
-						      map<string, AssetData>& results);
+		void			setSingleItemData(vector<NotificationDataElement *>& readingsData,
+							  map<string, AssetData>& results);
 
 	private:
 		/**
@@ -180,7 +180,7 @@ class NotificationQueue
 
 /**
  * This class keeps the result for Datapoint Min/Max/Avg
- * (as vData[0]) or multiple ones for Window
+ * (as vData[0]) or multiple ones for All
  */
 class ResultData
 {
@@ -190,7 +190,7 @@ class ResultData
 
 /**
  * This class keeps the string results of an evaluated asset and its datapoints
- * and a vector or Reading data for Latest evaluation type
+ * and a vector or Reading data for SingleItem evaluation type
  */
 class AssetData
 {
