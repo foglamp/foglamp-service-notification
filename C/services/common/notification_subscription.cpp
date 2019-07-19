@@ -201,28 +201,28 @@ bool NotificationSubscription::addSubscription(const std::string& assetName,
  */
 EvaluationType NotificationSubscription::getEvalType(const Value& value)
 {
-	// Default is latest, so time = 0
+	// Default is SingleItem, so set time = 0
 	time_t interval = 0;
-	EvaluationType::EVAL_TYPE evaluation = EvaluationType::Latest;
+	EvaluationType::EVAL_TYPE evaluation = EvaluationType::SingleItem;
 
-	if (value.HasMember("window"))
+	if (value.HasMember("All"))
 	{
-		interval = value["window"].GetUint();
-		evaluation = EvaluationType::Window;
+		interval = value["All"].GetUint();
+		evaluation = EvaluationType::All;
 	}
-	else if (value.HasMember("average"))
+	else if (value.HasMember("Average"))
 	{
-		interval = value["average"].GetUint();
+		interval = value["Average"].GetUint();
 		evaluation = EvaluationType::Average;
 	}
-	else if (value.HasMember("minimum"))
+	else if (value.HasMember("Minimum"))
 	{
-		interval = value["minimum"].GetUint();
+		interval = value["Minimum"].GetUint();
 		evaluation = EvaluationType::Minimum;
 	}
-	else if (value.HasMember("maximum"))
+	else if (value.HasMember("Maximum"))
 	{
-		interval = value["maximum"].GetUint();
+		interval = value["Maximum"].GetUint();
 		evaluation = EvaluationType::Maximum;
 	}
 
