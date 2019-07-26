@@ -13,3 +13,6 @@ packages/build
 
 # rpm packaging build
 archive/
+
+# Editor
+.idea/
