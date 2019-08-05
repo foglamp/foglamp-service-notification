@@ -1,13 +1,13 @@
 # A set of variables that define how we package this repository
 #
-package_name=service-notification
-exec_name=foglamp.services.notification
+service_name=notification
+exec_name=foglamp.services.${service_name}
 
 # Now build up the runtime requirements list. This has 3 components
 #   1. Generic packages we depend on in all architectures and package managers
 #   2. Architecture specific packages we depend on
 #   3. Package manager specific packages we depend on
-requirements="foglamp,curl,libcurl,curl-devel,libcurl-devel"
+requirements="foglamp"
 
 case "$arch" in
         x86_64)
@@ -19,7 +19,8 @@ case "$arch" in
 esac
 case "$package_manager" in
         deb)
-                ;;
+            ;;
         rpm)
-                ;;
+            requirements="${requirements},curl,libcurl,curl-devel,libcurl-devel"
+            ;;
 esac
