@@ -1198,7 +1198,8 @@ static void deliverNotification(NotificationRule* rule,
 		// Call delivery "plugin_deliver"
 		DeliveryPlugin* plugin = instance->getDeliveryPlugin();
 
-		if (!plugin->isEnabled())
+		if (plugin &&
+		    !plugin->isEnabled())
 		{
 			Logger::getLogger()->info("Delivery plugin '%s' is not enabled "
 						  "in notification '%s'",
@@ -1207,7 +1208,8 @@ static void deliverNotification(NotificationRule* rule,
 			return;
 		}
 
-		if (!instance ||
+		if (!plugin ||
+		    !instance ||
 		    !instance->isEnabled() ||
 		    !instance->getDelivery())
 		{
