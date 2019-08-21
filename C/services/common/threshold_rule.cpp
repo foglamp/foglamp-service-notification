@@ -18,11 +18,10 @@
  */
 static const char *default_config = QUOTE({
 			"plugin": {
-				"description": "The threshold notification rule plugin triggers a notification when reading data exceed an absolute limit value.", 
+				"description": "Generate a notification when datapoint value crosses a boundary.",
 				"type": "string",
 				"default": RULE_NAME,
-				"order": "8",
-				"displayName" : "The threshold notification rule plugin triggers a notification when reading data exceed an absolute limit value.", 
+				"displayName" : "Plugin",
 				"readonly": "true"
 				},
 			"description": {
@@ -30,21 +29,21 @@ static const char *default_config = QUOTE({
 				"type": "string",
 				"default": "Generate a notification if the value of a configured datapoint within an asset name exceeds a configured value.",
 				"displayName" : "Rule",
-				"order": "1"
+				"readonly": "true"
 				},
 			"asset" : {
 				"description": "The asset name for which notifications will be generated.",
 				"type": "string",
 				"default": "",
 				"displayName" : "Asset name",
-				"order": "2"
+				"order": "1"
 				},
 			"datapoint" : {
 				"description": "The datapoint within the asset name for which notifications will be generated.",
 				"type": "string",
 				"default": "",
 				"displayName" : "Datapoint name",
-				"order": "3"
+				"order": "2"
 				},
 			"condition" : {
 				"description": "The condition to evalaute", 
@@ -52,14 +51,14 @@ static const char *default_config = QUOTE({
 				"options": [ ">", ">=", "<", "<=" ],
 				"default" : ">",
 				"displayName" : "Condition",
-				"order": "4"
+				"order": "3"
 				},
 			"trigger_value" : {
 				"description": "Value at which to trigger a notification.",
 				"type": "float",
 				"default": "0.0",
 				"displayName" : "Trigger value",
-				"order": "5"
+				"order": "4"
 				},
 			"evaluation_data": {
 				"description": "The rule evaluation data: single item or window", 
@@ -67,7 +66,7 @@ static const char *default_config = QUOTE({
 				"options": [ "Single Item", "Window"],
 				"default" : "Single Item",
 				"displayName" : "Evaluation data",
-				"order": "6"
+				"order": "5"
 				},
 			"window_data": {
 				"description": "Window data evaluation type",
@@ -75,14 +74,14 @@ static const char *default_config = QUOTE({
 				"options": [ "Maximum", "Minimum", "Average"],
 				"default" : "Average",
 				"displayName" : "Window evaluation",
-				"order": "7"
+				"order": "6"
 				},
 			"time_window" : {
 				"description": "Duration of the time window, in seconds, for collecting data points",
 				"type": "integer",
 				"default": DEFAULT_TIME_INTERVAL, 
 				"displayName" : "Time window",
-				"order": "8"
+				"order": "7"
 				}
 	});
 
