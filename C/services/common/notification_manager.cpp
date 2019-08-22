@@ -228,6 +228,7 @@ NotificationManager::NotificationManager(const std::string& serviceName,
  */
 NotificationManager::~NotificationManager()
 {
+	lock_guard<mutex> guard(m_instancesMutex);
 	// Delete each element in m_instances
 	for (auto it = m_instances.begin();
 		  it != m_instances.end();
