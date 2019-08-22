@@ -230,7 +230,7 @@ class NotificationManager
 		const std::string&	getName() const { return m_name; };
 		static NotificationManager*
 					getInstance();
-		std::string		getJSONInstances() const;
+		std::string		getJSONInstances();
 		void 			loadInstances();
 		std::map<std::string, NotificationInstance *>&
 					getInstances() { return m_instances; };
@@ -276,6 +276,9 @@ class NotificationManager
 		RulePlugin*		createRulePlugin(const std::string& rulePluginName);
 		DeliveryPlugin*		createDeliveryPlugin(const std::string& deliveryPluginName);
 
+	public:
+		std::mutex		m_instancesMutex;
+
 	private:
 		const std::string	m_name;
 		static NotificationManager*
@@ -287,7 +290,6 @@ class NotificationManager
 					m_builtinRules;
 		NotificationService*	m_service;
 		Logger*			m_logger;
-		std::mutex		m_instancesMutex;
 		NotificationStats	m_stats;
 };
 #endif

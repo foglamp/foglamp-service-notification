@@ -186,11 +186,10 @@ void NotificationQueue::stop()
 			  s != (*it).second.end();
 			  ++s)
 		{
+			lock_guard<mutex> guard(manager->m_instancesMutex);
 			// Get notification rule object
 			string notificationName = (*s).getNotificationName();
-			manager->lockInstances();
 			NotificationInstance* instance = manager->getNotificationInstance(notificationName);
-			manager->unlockInstances();
 
 			// Get ruleName
 			if (instance &&
@@ -359,12 +358,12 @@ bool NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 		  it != subscriptionItems.end();
 		  ++it)
 	{
+	{
+	lock_guard<mutex> guard(manager->m_instancesMutex);
 		// Get notification instance name
 		string notificationName = (*it).getNotificationName();
 		// Get instance pointer
-		manager->lockInstances();
 		NotificationInstance* instance = manager->getNotificationInstance(notificationName);
-		manager->unlockInstances();
 		
 		if (instance &&
 		    instance->isEnabled())
@@ -394,6 +393,7 @@ bool NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 						   	   assetName.c_str());
 			}
 		}
+	}
 	}
 
 	/*
@@ -690,6 +690,8 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 	// Get NotificationManager instance
 	NotificationManager* manager = NotificationManager::getInstance();
 
+	lock_guard<mutex> guard(manager->m_instancesMutex);
+
 	// Iterate trough subscriptions
 	for (auto it = registeredItems.begin();
 		  it != registeredItems.end();
@@ -701,9 +703,7 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 		// Get notification instance name
 		string notificationName = (*it).getNotificationName();
 		// Get instance pointer
-		manager->lockInstances();
 		NotificationInstance* instance = manager->getNotificationInstance(notificationName);
-		manager->unlockInstances();
 
 		// Check wether the instance exists and it is enabled
 		if (!instance ||
@@ -1182,11 +1182,10 @@ static void deliverNotification(NotificationRule* rule,
 
 	// Get instances
 	NotificationManager* instances = NotificationManager::getInstance();
-	instances->lockInstances();
+
 	// Find instance for this rule
 	NotificationInstance* instance =
 		instances->getNotificationInstance(rule->getNotificationName());
-	instances->unlockInstances();
 
 	// Get notification action
 	bool handleRule = instance->handleState(evalRule);
