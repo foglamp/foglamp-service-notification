@@ -1270,6 +1270,8 @@ bool NotificationInstance::updateInstance(const string& name,
 		// Unregister current subscriptions for this rule and
 		// clean all current rule/asset buffers
 		// remove all assets from the rule
+		{
+		lock_guard<mutex> guard(instances->m_instancesMutex);
 		for (auto a = assets.begin();
 			  a != assets.end(); )
 		{
@@ -1277,6 +1279,7 @@ bool NotificationInstance::updateInstance(const string& name,
 							  ruleName);
 			// Remove asseet
 			assets.erase(a);
+		}
 		}
 
 		// Just remove current instance
@@ -1340,6 +1343,8 @@ bool NotificationInstance::updateInstance(const string& name,
 			// Unregister current subscriptions for this rule and
 			// clean all current rule/asset buffers
 			// remove all assets from the rule
+			{
+			lock_guard<mutex> guard(instances->m_instancesMutex);
 			for (auto a = assets.begin();
 			          a != assets.end(); )
 			{
@@ -1347,6 +1352,7 @@ bool NotificationInstance::updateInstance(const string& name,
 								  ruleName);
 				// Remove asseet
 				assets.erase(a);
+			}
 			}
 		}
 
@@ -1571,9 +1577,10 @@ bool NotificationManager::APIdeleteInstance(const string& instanceName)
 	NotificationManager* notifications = NotificationManager::getInstance();
 	NotificationInstance* instance = NULL;
 
-	notifications->lockInstances();
+	{
+	lock_guard<mutex> guard(m_instancesMutex);
+
 	instance = notifications->getNotificationInstance(instanceName);
-	notifications->unlockInstances();
 
 	if (instance)
 	{
@@ -1597,6 +1604,7 @@ bool NotificationManager::APIdeleteInstance(const string& instanceName)
 				assets.erase(a);
 			}
 		}
+	}
 	}
 
 	bool ret = this->removeInstance(instanceName);

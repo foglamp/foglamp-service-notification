@@ -177,6 +177,7 @@ void NotificationQueue::stop()
 	std::map<std::string, std::vector<SubscriptionElement>>&
 		registeredItems = subscriptions->getAllSubscriptions();
 
+	lock_guard<mutex> guard(manager->m_instancesMutex);
 	// Iterate trough subscriptions
 	for (auto it = registeredItems.begin();
 		  it != registeredItems.end();
@@ -186,7 +187,6 @@ void NotificationQueue::stop()
 			  s != (*it).second.end();
 			  ++s)
 		{
-			lock_guard<mutex> guard(manager->m_instancesMutex);
 			// Get notification rule object
 			string notificationName = (*s).getNotificationName();
 			NotificationInstance* instance = manager->getNotificationInstance(notificationName);
@@ -358,8 +358,8 @@ bool NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 		  it != subscriptionItems.end();
 		  ++it)
 	{
-	{
-	lock_guard<mutex> guard(manager->m_instancesMutex);
+		lock_guard<mutex> guard(manager->m_instancesMutex);
+
 		// Get notification instance name
 		string notificationName = (*it).getNotificationName();
 		// Get instance pointer
@@ -393,7 +393,6 @@ bool NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 						   	   assetName.c_str());
 			}
 		}
-	}
 	}
 
 	/*
@@ -690,13 +689,13 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 	// Get NotificationManager instance
 	NotificationManager* manager = NotificationManager::getInstance();
 
-	lock_guard<mutex> guard(manager->m_instancesMutex);
-
 	// Iterate trough subscriptions
 	for (auto it = registeredItems.begin();
 		  it != registeredItems.end();
 		  ++it)
 	{
+		lock_guard<mutex> guard(manager->m_instancesMutex);
+
 		// Per asset notification map
 		map<string, AssetData> results;
 
