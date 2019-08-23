@@ -228,6 +228,7 @@ NotificationManager::NotificationManager(const std::string& serviceName,
  */
 NotificationManager::~NotificationManager()
 {
+	lock_guard<mutex> guard(m_instancesMutex);
 	// Delete each element in m_instances
 	for (auto it = m_instances.begin();
 		  it != m_instances.end();
@@ -325,7 +326,15 @@ void NotificationManager::addInstance(const string& instanceName,
 									  type,
 									  rule,
 									  delivery);
-		m_instances[instanceName] = instance;
+		if (instance)
+		{
+			m_instances[instanceName] = instance;
+		}
+		else
+		{
+			 Logger::getLogger()->error("Cannot setup new instance for key %s",
+						    instanceName.c_str());
+		}
 	}
 }
 
@@ -334,8 +343,10 @@ void NotificationManager::addInstance(const string& instanceName,
  *
  * @return	JSON string with all loaded instances
  */
-string NotificationManager::getJSONInstances() const
+string NotificationManager::getJSONInstances()
 {
+	// Protect changes to m_instances
+	lock_guard<mutex> guard(m_instancesMutex);
 	string ret = "";
 	for (auto it = m_instances.begin();
 		  it != m_instances.end();
@@ -1217,10 +1228,13 @@ bool NotificationInstance::updateInstance(const string& name,
 		{
 			// Get new instance
 			// Protect access to m_instances
-			instances->lockInstances();
-			auto i = instances->getInstances().find(name);
-			bool ret = i != instances->getInstances().end();
-			instances->unlockInstances();
+			{
+				lock_guard<mutex> guard(instances->m_instancesMutex);
+				bool ret;
+				//instances->lockInstances();
+				auto i = instances->getInstances().find(name);
+				ret = i != instances->getInstances().end();
+				//instances->unlockInstances();
 			if (ret)
 			{
 				// Create a new subscription
@@ -1229,6 +1243,7 @@ bool NotificationInstance::updateInstance(const string& name,
 				Logger::getLogger()->info("Succesfully enabled notification instance '%s'",
 							  name.c_str());
 				enabled = true;
+			}
 			}
 		}
 		else
@@ -1256,6 +1271,8 @@ bool NotificationInstance::updateInstance(const string& name,
 		// Unregister current subscriptions for this rule and
 		// clean all current rule/asset buffers
 		// remove all assets from the rule
+		{
+		lock_guard<mutex> guard(instances->m_instancesMutex);
 		for (auto a = assets.begin();
 			  a != assets.end(); )
 		{
@@ -1263,6 +1280,7 @@ bool NotificationInstance::updateInstance(const string& name,
 							  ruleName);
 			// Remove asseet
 			assets.erase(a);
+		}
 		}
 
 		// Just remove current instance
@@ -1326,6 +1344,8 @@ bool NotificationInstance::updateInstance(const string& name,
 			// Unregister current subscriptions for this rule and
 			// clean all current rule/asset buffers
 			// remove all assets from the rule
+			{
+			lock_guard<mutex> guard(instances->m_instancesMutex);
 			for (auto a = assets.begin();
 			          a != assets.end(); )
 			{
@@ -1333,6 +1353,7 @@ bool NotificationInstance::updateInstance(const string& name,
 								  ruleName);
 				// Remove asseet
 				assets.erase(a);
+			}
 			}
 		}
 
@@ -1344,15 +1365,18 @@ bool NotificationInstance::updateInstance(const string& name,
 		{
 			// Get new instance
 			// Protect access to m_instances
-			instances->lockInstances();
-			auto i = instances->getInstances().find(name);
-			bool ret = i != instances->getInstances().end();
-			instances->unlockInstances();
+			{
+				lock_guard<mutex> guard(instances->m_instancesMutex);
+				//instances->lockInstances();
+				auto i = instances->getInstances().find(name);
+				bool ret = i != instances->getInstances().end();
+				//instances->unlockInstances();
 			if (ret)
 			{
 				// Create a new subscription
 				subscriptions->createSubscription((*i).second);
 				retCode = true;
+			}
 			}
 		}
 
@@ -1410,9 +1434,18 @@ bool NotificationManager::removeInstance(const string& instanceName)
 void NotificationManager::collectZombies()
 {
 	lock_guard<mutex> guard(m_instancesMutex);
-	for (auto r = m_instances.begin(); r != m_instances.end(); ++r)
+	for (auto r = m_instances.begin();
+		  r != m_instances.end(); )
 	{
-		if (r->second->isZombie())
+		if (!r->second)
+		{
+			Logger::getLogger()->error("Instance %s has NULL object, size %lu",
+						   r->first.c_str(),
+						   m_instances.size());
+		}
+
+		if (r->second &&
+		    r->second->isZombie())
 		{
 			Logger::getLogger()->debug("Instance %s removed from m_instances",
 					   r->second->getName().c_str());
@@ -1421,6 +1454,10 @@ void NotificationManager::collectZombies()
 			r->second = NULL;
 			// Remove element
 			m_instances.erase(r);
+		}
+		else
+		{
+			++r;
 		}
 	}
 }
@@ -1541,9 +1578,10 @@ bool NotificationManager::APIdeleteInstance(const string& instanceName)
 	NotificationManager* notifications = NotificationManager::getInstance();
 	NotificationInstance* instance = NULL;
 
-	notifications->lockInstances();
+	{
+	lock_guard<mutex> guard(m_instancesMutex);
+
 	instance = notifications->getNotificationInstance(instanceName);
-	notifications->unlockInstances();
 
 	if (instance)
 	{
@@ -1567,6 +1605,7 @@ bool NotificationManager::APIdeleteInstance(const string& instanceName)
 				assets.erase(a);
 			}
 		}
+	}
 	}
 
 	bool ret = this->removeInstance(instanceName);
