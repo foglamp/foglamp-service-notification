@@ -380,9 +380,7 @@ void NotificationSubscription::removeSubscription(const string& assetName,
 		{
 			// Get notification rule object 
 			string notificationName = (*e).getNotificationName();
-			manager->lockInstances();
 			NotificationInstance* instance = manager->getNotificationInstance(notificationName);
-			manager->unlockInstances();
 
 			if (instance &&
 			    !instance->isZombie())
