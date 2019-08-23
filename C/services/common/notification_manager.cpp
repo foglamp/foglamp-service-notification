@@ -1243,15 +1243,15 @@ bool NotificationInstance::updateInstance(const string& name,
 				auto i = instances->getInstances().find(name);
 				ret = i != instances->getInstances().end();
 				//instances->unlockInstances();
-			if (ret)
-			{
-				// Create a new subscription
-				subscriptions->createSubscription((*i).second);
+				if (ret)
+				{
+					// Create a new subscription
+					subscriptions->createSubscription((*i).second);
 
-				Logger::getLogger()->info("Succesfully enabled notification instance '%s'",
-							  name.c_str());
-				enabled = true;
-			}
+					Logger::getLogger()->info("Succesfully enabled notification instance '%s'",
+								  name.c_str());
+					enabled = true;
+				}
 			}
 		}
 		else
@@ -1279,16 +1279,14 @@ bool NotificationInstance::updateInstance(const string& name,
 		// Unregister current subscriptions for this rule and
 		// clean all current rule/asset buffers
 		// remove all assets from the rule
-		{
-		lock_guard<mutex> guard(instances->m_instancesMutex);
 		for (auto a = assets.begin();
 			  a != assets.end(); )
 		{
+			lock_guard<mutex> guard(instances->m_instancesMutex);
 			subscriptions->removeSubscription((*a).getAssetName(),
 							  ruleName);
 			// Remove asseet
 			assets.erase(a);
-		}
 		}
 
 		// Just remove current instance
@@ -1352,16 +1350,14 @@ bool NotificationInstance::updateInstance(const string& name,
 			// Unregister current subscriptions for this rule and
 			// clean all current rule/asset buffers
 			// remove all assets from the rule
-			{
-			lock_guard<mutex> guard(instances->m_instancesMutex);
 			for (auto a = assets.begin();
 			          a != assets.end(); )
 			{
+				lock_guard<mutex> guard(instances->m_instancesMutex);
 				subscriptions->removeSubscription((*a).getAssetName(),
 								  ruleName);
 				// Remove asseet
 				assets.erase(a);
-			}
 			}
 		}
 
@@ -1379,12 +1375,12 @@ bool NotificationInstance::updateInstance(const string& name,
 				auto i = instances->getInstances().find(name);
 				bool ret = i != instances->getInstances().end();
 				//instances->unlockInstances();
-			if (ret)
-			{
-				// Create a new subscription
-				subscriptions->createSubscription((*i).second);
-				retCode = true;
-			}
+				if (ret)
+				{
+					// Create a new subscription
+					subscriptions->createSubscription((*i).second);
+					retCode = true;
+				}
 			}
 		}
 
