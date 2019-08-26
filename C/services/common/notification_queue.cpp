@@ -514,7 +514,7 @@ void NotificationQueue::keepBufferData(const std::string& ruleName,
 		// Free object data
 		delete(*it);
 		//Remove current vector object
-		data.erase(it);
+		it = data.erase(it);
 	}
 	
 #ifdef QUEUE_DEBUG_DATA
