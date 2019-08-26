@@ -1239,10 +1239,8 @@ bool NotificationInstance::updateInstance(const string& name,
 			{
 				lock_guard<mutex> guard(instances->m_instancesMutex);
 				bool ret;
-				//instances->lockInstances();
 				auto i = instances->getInstances().find(name);
 				ret = i != instances->getInstances().end();
-				//instances->unlockInstances();
 				if (ret)
 				{
 					// Create a new subscription
@@ -1285,8 +1283,8 @@ bool NotificationInstance::updateInstance(const string& name,
 			lock_guard<mutex> guard(instances->m_instancesMutex);
 			subscriptions->removeSubscription((*a).getAssetName(),
 							  ruleName);
-			// Remove asseet
-			assets.erase(a);
+			// Remove asset
+			a = assets.erase(a);
 		}
 
 		// Just remove current instance
@@ -1357,7 +1355,7 @@ bool NotificationInstance::updateInstance(const string& name,
 				subscriptions->removeSubscription((*a).getAssetName(),
 								  ruleName);
 				// Remove asseet
-				assets.erase(a);
+				a = assets.erase(a);
 			}
 		}
 
@@ -1443,8 +1441,7 @@ void NotificationManager::collectZombies()
 	{
 		if (!r->second)
 		{
-			Logger::getLogger()->error("Instance %s has NULL object, size %lu",
-						   r->first.c_str(),
+			Logger::getLogger()->debug("Instance has NULL object, size %lu",
 						   m_instances.size());
 		}
 
@@ -1457,7 +1454,7 @@ void NotificationManager::collectZombies()
 			delete r->second;
 			r->second = NULL;
 			// Remove element
-			m_instances.erase(r);
+			r = m_instances.erase(r);
 		}
 		else
 		{
@@ -1606,7 +1603,7 @@ bool NotificationManager::APIdeleteInstance(const string& instanceName)
 				subscriptions->removeSubscription((*a).getAssetName(),
 								   ruleName);
 				// Remove asseet
-				assets.erase(a);
+				a = assets.erase(a);
 			}
 		}
 	}

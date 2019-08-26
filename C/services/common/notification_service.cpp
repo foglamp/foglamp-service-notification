@@ -366,7 +366,7 @@ void NotificationService::configChange(const string& categoryName,
 					subscriptions->removeSubscription((*a).getAssetName(),
 									  ruleName);
 					// Remove asseet
-					allAssets.erase(a);
+					a = allAssets.erase(a);
 				}
 
 				// Create a new subscription by calling "plugin_triggers"
