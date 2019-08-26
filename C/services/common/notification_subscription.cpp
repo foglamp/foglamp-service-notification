@@ -393,7 +393,7 @@ void NotificationSubscription::removeSubscription(const string& assetName,
 								   notificationName.c_str(),
 								   currentRule.c_str(),
 								   assetName.c_str());
-					a = elems.erase(e);
+					e = elems.erase(e);
 				}
 				else
 				{
