@@ -231,6 +231,8 @@ EvaluationType NotificationSubscription::getEvalType(const Value& value)
 /**
  * Unregister a single subscription from storage layer
  *
+ * The caller of this routine must hold the subscriptions lock
+ *
  * @param    assetName		The asset name to unregister
  */
 void NotificationSubscription::unregisterSubscription(const string& assetName)
