@@ -85,7 +85,6 @@ void NotificationSubscription::unregisterSubscriptions()
 	m_subscriptionMutex.lock();
 	std:map<std::string, std::vector<SubscriptionElement>>&
 		subscriptions = this->getAllSubscriptions();
-	m_subscriptionMutex.unlock();
 
 	for (auto it = subscriptions.begin();
 		  it != subscriptions.end();
@@ -94,11 +93,11 @@ void NotificationSubscription::unregisterSubscriptions()
 		// Unregister interest
 		m_storage.unregisterAssetNotification((*it).first,
 						      callBackURL + (*it).first);
-
 		m_logger->info("Unregistering asset '" + \
 			       (*it).first + "' for notification " + \
 			       this->getNotificationName());
 	}
+	m_subscriptionMutex.unlock();
 }
 
 /**
@@ -242,11 +241,9 @@ void NotificationSubscription::unregisterSubscription(const string& assetName)
 	string callBackURL = api->getCallBackURL();
 
 	// Get all NotificationSubscriptions
-	m_subscriptionMutex.lock();
 	std:map<std::string, std::vector<SubscriptionElement>>&
 		subscriptions = this->getAllSubscriptions();
 	auto it = subscriptions.find(assetName);
-	m_subscriptionMutex.unlock();
 
 	if (it != subscriptions.end())
 	{
@@ -351,7 +348,6 @@ void NotificationSubscription::removeSubscription(const string& assetName,
 		allSubscriptions = this->getAllSubscriptions();
 	auto it = allSubscriptions.find(assetName);
 	bool ret = it != allSubscriptions.end();
-	this->unlockSubscriptions();
 
 	// For the found assetName subscriptions
 	// 1- Unsubscribe notification interest for assetNamme
@@ -360,7 +356,6 @@ void NotificationSubscription::removeSubscription(const string& assetName,
 	// 4- Remove Subscription
 	if (ret)
 	{
-		// Get Notification queue instance
 		vector<SubscriptionElement>& elems = (*it).second;
 		if (elems.size() == 1)
 		{
@@ -420,9 +415,8 @@ void NotificationSubscription::removeSubscription(const string& assetName,
 		// 4- Remove subscription if array is empty
 		if (!elems.size())
 		{
-			this->lockSubscriptions();
 			allSubscriptions.erase(it);
-			this->unlockSubscriptions();
 		}
 	}
+	this->unlockSubscriptions();
 }
