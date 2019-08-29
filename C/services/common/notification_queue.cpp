@@ -352,7 +352,6 @@ bool NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 	subscriptions->lockSubscriptions();
 	std::vector<SubscriptionElement>&
 		subscriptionItems = subscriptions->getSubscription(assetName);
-	subscriptions->unlockSubscriptions();
 
 	for (auto it = subscriptionItems.begin();
 		  it != subscriptionItems.end();
@@ -394,6 +393,7 @@ bool NotificationQueue::feedAllDataBuffers(NotificationQueueElement* data)
 			}
 		}
 	}
+	subscriptions->unlockSubscriptions();
 
 	/*
 	 * Now collect all pending deletes of notification instances
@@ -676,15 +676,14 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 {
 	// Get the subscriptions instance
 	NotificationSubscription* subscriptions = NotificationSubscription::getInstance();
-	// Get all subscriptions for assetName
-	subscriptions->lockSubscriptions();
-	std::vector<SubscriptionElement>&
-		registeredItems = subscriptions->getSubscription(assetName);
-	subscriptions->unlockSubscriptions();
 	if (!subscriptions)
 	{
 		return;
 	}
+	// Get all subscriptions for assetName
+	subscriptions->lockSubscriptions();
+	std::vector<SubscriptionElement>&
+		registeredItems = subscriptions->getSubscription(assetName);
 
 	// Get NotificationManager instance
 	NotificationManager* manager = NotificationManager::getInstance();
@@ -741,6 +740,7 @@ void NotificationQueue::processAllDataBuffers(const string& assetName)
 			this->sendNotification(results, *it);
 		}
 	}
+	subscriptions->unlockSubscriptions();
 }
 
 /**
