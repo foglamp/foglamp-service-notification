@@ -296,11 +296,22 @@ bool ThresholdRule::checkLimit(const Value& point,
 	if (point.GetType() == kNumberType)
 	{
 		if (point.IsDouble())
-		{       
-			if (point.GetDouble() > limitValue)
-			{       
-				ret = true;
-			}
+		{
+			switch (m_condition)
+			{
+				case THRESHOLD_GREATER:
+					ret = point.GetDouble() > limitValue;
+					break;
+				case THRESHOLD_GREATER_EQUAL:
+					ret = point.GetDouble() >= limitValue;
+					break;
+				case THRESHOLD_LESS:
+					ret = point.GetDouble() < limitValue;
+					break;
+				case THRESHOLD_LESS_EQUAL:
+					ret = point.GetDouble() <= limitValue;
+					break;
+                        }
 		}
 		else
 		{
