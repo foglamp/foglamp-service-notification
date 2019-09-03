@@ -1565,8 +1565,8 @@ bool NotificationManager::auditNotification(const string& notificationName,
 	Document JSONData;
 	JSONData.Parse(reason.c_str());
 	if (JSONData.HasParseError() ||
-	!JSONData.HasMember("reason") ||
-	!JSONData["reason"].IsString())
+	    !JSONData.HasMember("reason") ||
+	    !JSONData["reason"].IsString())
 	{
 		m_logger->error("Failed to parse trigger_reason JSON '%s' "
 				"for notification '%s'",
