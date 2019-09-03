@@ -257,7 +257,8 @@ class NotificationManager
 							      std::string& deliveryPluginName,
 							      NOTIFICATION_TYPE& type,
 							      std::string& customText);
-		bool			auditNotification(const std::string& notification);
+		bool			auditNotification(const std::string& notification,
+							  const std::string& reason);
 		bool			APIdeleteInstance(const string& instanceName);
 		void			updateSentStats() { m_stats.sent++; };
 		void			collectZombies();

@@ -1224,7 +1224,7 @@ static void deliverNotification(NotificationRule* rule,
 							"ALERT for " + rule->getName() :
 							customText));
 			// Audit log
-			instances->auditNotification(instance->getName());
+			instances->auditNotification(instance->getName(), reason);
 			// Update sent notification statistics
 			instances->updateSentStats();
 		}

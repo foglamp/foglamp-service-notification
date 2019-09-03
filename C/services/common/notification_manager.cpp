@@ -1556,11 +1556,28 @@ bool NotificationManager::getConfigurationItems(const ConfigCategory& config,
  * Audit log entry for sent notification
  *
  * @param       notificationName	The notification just delivered
+ * @param       reason			The trigger reason as a JSON string
  * @return				True on success, false otherwise
  */
-bool NotificationManager::auditNotification(const string& notificationName)
+bool NotificationManager::auditNotification(const string& notificationName,
+					    const string& reason)
 {
-	return m_managerClient->addAuditEntry("NTFSN",
+	Document JSONData;
+	JSONData.Parse(reason.c_str());
+	if (JSONData.HasParseError() ||
+	    !JSONData.HasMember("reason") ||
+	    !JSONData["reason"].IsString())
+	{
+		m_logger->error("Failed to parse trigger_reason JSON '%s' "
+				"for notification '%s'",
+				reason.c_str(),
+				notificationName.c_str());
+		return false;
+	}
+	string audit = JSONData["reason"].GetString();
+	return m_managerClient->addAuditEntry((audit.compare("cleared") == 0 ?
+					       "NTCLR" :
+					       "NTFSN"),
 					      "INFORMATION",
 					      "{\"name\": \"" + notificationName + "\"}");
 }
