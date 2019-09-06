@@ -216,7 +216,7 @@ void NotificationQueue::stop()
 /**
  * Add an element to the queue
  *
- * @param    element		The elemnennt to add the queue.
+ * @param    element		The element to add the queue.
  * @return			True on succes, false otherwise.
  */
 bool NotificationQueue::addElement(NotificationQueueElement* element)
