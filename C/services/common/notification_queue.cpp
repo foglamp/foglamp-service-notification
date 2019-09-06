@@ -216,7 +216,7 @@ void NotificationQueue::stop()
 /**
  * Add an element to the queue
  *
- * @param    element		The elemnennt to add the queue.
+ * @param    element		The element to add the queue.
  * @return			True on succes, false otherwise.
  */
 bool NotificationQueue::addElement(NotificationQueueElement* element)
@@ -1199,10 +1199,9 @@ static void deliverNotification(NotificationRule* rule,
 		if (plugin &&
 		    !plugin->isEnabled())
 		{
-			Logger::getLogger()->info("Delivery plugin '%s' is not enabled "
-						  "in notification '%s'",
-						  plugin->getName().c_str(),
-						  rule->getNotificationName().c_str());
+			Logger::getLogger()->warn(
+				"Notification %s has triggered but delivery plugin '%s' is not enabled",
+				  rule->getNotificationName().c_str(), plugin->getName().c_str());
 			return;
 		}
 
@@ -1216,6 +1215,8 @@ static void deliverNotification(NotificationRule* rule,
 		}
 		else
 		{
+			Logger::getLogger()->info("Notification %s will be delivered with reason %s",
+					rule->getNotificationName().c_str(), reason.c_str());
 			string customText = instance->getDelivery()->getText();
 			bool retCode = plugin->deliver(instance->getDelivery()->getName(),
 							instance->getDelivery()->getNotificationName(),
