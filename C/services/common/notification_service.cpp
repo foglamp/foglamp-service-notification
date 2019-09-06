@@ -172,7 +172,7 @@ bool NotificationService::start(string& coreAddress,
 
 	// Register NOTIFICATION_CATEGORY to FogLAMP Core
 	unsigned int retryCount = 0;
-	while (m_managerClient->registerCategory("Notifications") == false &&
+	while (m_managerClient->registerCategory(NOTIFICATION_CATEGORY) == false &&
 		++retryCount < 10)
 	{
 		sleep(2 * retryCount);
