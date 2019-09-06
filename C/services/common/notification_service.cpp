@@ -42,6 +42,9 @@ NotificationService::NotificationService(const string& myName) :
 
 	// Create new logger instance
 	m_logger = new Logger(myName);
+	m_logger->setMinLevel("warning");
+
+	m_logger->warn("Starting %s notification server", myName.c_str());
 
 	// One thread
 	unsigned int threads = 1;
@@ -134,6 +137,10 @@ bool NotificationService::start(string& coreAddress,
 	// Create a category with given Notification server m_name
 	DefaultConfigCategory notificationServerConfig(m_name, string("{}"));
 	notificationServerConfig.setDescription("Notification server " + m_name);
+	vector<string>  logLevels = { "error", "warning", "info", "debug" };
+	notificationServerConfig.addItem("logLevel", "Minimum logging level reported",
+                        "warning", "warning", logLevels);
+	notificationServerConfig.setItemDisplayName("logLevel", "Minimum Log Level");
 	if (!m_managerClient->addCategory(notificationServerConfig, true))
 	{
 		m_logger->fatal("Notification service '" + m_name + \
@@ -169,6 +176,12 @@ bool NotificationService::start(string& coreAddress,
 		++retryCount < 10)
 	{
 		sleep(2 * retryCount);
+	}
+	registerCategory(m_name);
+	ConfigCategory category = m_managerClient->getCategory(m_name);
+	if (category.itemExists("logLevel"))
+	{
+		m_logger->setMinLevel(category.getValue("logLevel"));
 	}
 
 	// Get Storage service
@@ -296,6 +309,17 @@ void NotificationService::configChange(const string& categoryName,
 {
 	NotificationManager* notifications = NotificationManager::getInstance();
 	NotificationInstance* instance = NULL;
+
+	if (categoryName == m_name)
+	{
+		ConfigCategory config(categoryName, category);
+		if (config.itemExists("logLevel"))
+		{
+			m_logger->setMinLevel(config.getValue("logLevel"));
+			m_logger->warn("Set log level to %s", config.getValue("logLevel").c_str());
+		}
+		return;
+	}
 
 	std::size_t found;
 
