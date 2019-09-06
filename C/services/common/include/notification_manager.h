@@ -197,8 +197,18 @@ class NotificationInstance
 						    const std::string& category);
 		bool			updateInstance(const string& name,
 						       const ConfigCategory& config);
-		void			enable() { m_enable = true; };
-		void			disable() { m_enable = false; };
+		void			enable()
+					{
+						Logger::getLogger()->info("Notification %s enabled",
+								m_name.c_str());
+						m_enable = true;
+					};
+		void			disable()
+					{
+						Logger::getLogger()->info("Notification %s disabled",
+								m_name.c_str());
+						m_enable = false;
+					};
 		void			setType(NotificationType type) { m_type = type; }; 
 		void			markAsZombie() { m_zombie = true; };
 		bool			isZombie() { return m_zombie; };
