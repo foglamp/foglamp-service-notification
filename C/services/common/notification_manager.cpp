@@ -1587,7 +1587,7 @@ bool NotificationManager::auditNotification(const string& notificationName,
 	}
 	string audit = JSONData["reason"].GetString();
 	return m_managerClient->addAuditEntry((audit.compare("cleared") == 0 ?
-					       "NTCLR" :
+					       "NTFCL" :
 					       "NTFSN"),
 					      "INFORMATION",
 					      "{\"name\": \"" + notificationName + "\"}");
