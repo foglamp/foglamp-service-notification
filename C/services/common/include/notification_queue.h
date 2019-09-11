@@ -63,10 +63,13 @@ class NotificationQueueElement
 						{
 							Logger::getLogger()->info("Notification data queued for %d seconds", now - m_qTime);
 						}
-						time_t readingT = (*m_readings)[0]->getUserTimestamp();
-						if (now - readingT > 10)
+						if (m_readings->getCount() > 0)
 						{
-							Logger::getLogger()->info("Notification data oldest reading is %d seconds old", now - readingT);
+							time_t readingT = (*m_readings)[0]->getUserTimestamp();
+							if (now - readingT > 10)
+							{
+								Logger::getLogger()->info("Notification data oldest reading is %d seconds old", now - readingT);
+							}
 						}
 					};
 
