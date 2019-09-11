@@ -106,6 +106,7 @@ NotificationQueueElement::NotificationQueueElement(const string& assetName,
                 assert((*m)->getAssetName().compare(assetName) == 0);
         }
 #endif
+	time(&m_qTime);
 }
 
 /**
@@ -281,6 +282,7 @@ void NotificationQueue::process()
 
 		if (data)
 		{
+			data->queuedTimeCheck();
 			// Process data
 			this->processDataSet(data);
 			delete data;
@@ -313,7 +315,7 @@ void NotificationQueue::processDataSet(NotificationQueueElement* data)
 	 * (2) For each ruleName related to assetName process data in buffer[ruleName]
 	 */
 
-	// (1) feed al rule buffers
+	// (1) feed all rule buffers
 	if (this->feedAllDataBuffers(data))
 	{
 		// (2) process all data in all rule buffers for given assetName
