@@ -56,10 +56,27 @@ class NotificationQueueElement
 
 		const std::string&	getAssetName() { return m_assetName; };
 		ReadingSet*		getAssetData() { return m_readings; };
+		void			queuedTimeCheck()
+					{
+						time_t now = time(0);
+						if (now - m_qTime > 5)
+						{
+							Logger::getLogger()->info("Notification data queued for %d seconds", now - m_qTime);
+						}
+						if (m_readings->getCount() > 0)
+						{
+							time_t readingT = (*m_readings)[0]->getUserTimestamp();
+							if (now - readingT > 10)
+							{
+								Logger::getLogger()->info("Notification data oldest reading is %d seconds old", now - readingT);
+							}
+						}
+					};
 
 	private:
 		std::string		m_assetName;
 		ReadingSet*		m_readings;
+		time_t			m_qTime;
 };
 
 /**
