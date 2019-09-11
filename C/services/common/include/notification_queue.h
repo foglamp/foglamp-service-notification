@@ -59,12 +59,12 @@ class NotificationQueueElement
 		void			queuedTimeCheck()
 					{
 						time_t now = time(0);
-						if (now - m_qTime > 2)
+						if (now - m_qTime > 5)
 						{
 							Logger::getLogger()->info("Notification data queued for %d seconds", now - m_qTime);
 						}
 						time_t readingT = (*m_readings)[0]->getUserTimestamp();
-						if (now - readingT > 5)
+						if (now - readingT > 10)
 						{
 							Logger::getLogger()->info("Notification data oldest reading is %d seconds old", now - readingT);
 						}
