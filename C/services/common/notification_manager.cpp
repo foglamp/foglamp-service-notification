@@ -1,5 +1,5 @@
 /*
- * FogLAMP notification manager.
+ * Fledge notification manager.
  *
  * Copyright (c) 2018 Dianomic Systems
  *
@@ -257,7 +257,7 @@ NotificationManager* NotificationManager::getInstance()
 }
 
 /**
- * Load all notification instances found in "Notifications" FogLAMP category.
+ * Load all notification instances found in "Notifications" Fledge category.
  *
  */
 void NotificationManager::loadInstances()

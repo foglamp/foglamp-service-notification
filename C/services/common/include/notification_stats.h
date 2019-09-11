@@ -1,7 +1,7 @@
 #ifndef _NOTIFICATION_STATS_H
 #define _NOTIFICATION_STATS_H
 /*
- * FogLAMP Notification service statistics
+ * Fledge Notification service statistics
  *
  * Copyright (c) 2019 Dianomic Systems
  *

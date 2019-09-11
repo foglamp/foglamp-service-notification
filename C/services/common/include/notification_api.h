@@ -1,7 +1,7 @@
 #ifndef _NOTIFICATION_API_H
 #define _NOTIFICATION_API_H
 /*
- * FogLAMP Notification service.
+ * Fledge Notification service.
  *
  * Copyright (c) 2018 Massimiliano Pinto
  *

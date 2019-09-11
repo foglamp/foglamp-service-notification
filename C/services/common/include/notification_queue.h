@@ -1,7 +1,7 @@
 #ifndef _NOTIFICATION_QUEUE_H
 #define _NOTIFICATION_QUEUE_H
 /*
- * FogLAMP notification queue manager.
+ * Fledge notification queue manager.
  *
  * Copyright (c) 2018 Dianomic Systems
  *

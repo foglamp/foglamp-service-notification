@@ -5,17 +5,17 @@
 #
 exitstate=0
 
-# Set here location of FogLAMP source code:
-# if FOGLAMP_ROOT is not set then use FogLAMP includes and FogLAMP libs
+# Set here location of Fledge source code:
+# if FLEDGE_ROOT is not set then use Fledge includes and Fledge libs
 
-FOGLAMP_SRC="${FOGLAMP_ROOT}"
-# NOTE: FogLAMP libraries come from FOGLAMP_SRC/cmake_build/C/lib
+FLEDGE_SRC="${FLEDGE_ROOT}"
+# NOTE: Fledge libraries come from FLEDGE_SRC/cmake_build/C/lib
 
 # If not set ...
-if [ "${FOGLAMP_SRC}" = "" ]; then
-	# Set path with FogLAMP includes and FogLAMP libs:
-	FOGLAMP_INCLUDE_DIRS="/usr/include/foglamp"
-	FOGLAMP_LIB_DIRS="/usr/lib/foglamp"
+if [ "${FLEDGE_SRC}" = "" ]; then
+	# Set path with Fledge includes and Fledge libs:
+	FLEDGE_INCLUDE_DIRS="/usr/include/fledge"
+	FLEDGE_LIB_DIRS="/usr/lib/fledge"
 fi
 
 # Go back to all tests path
@@ -35,7 +35,7 @@ for f in $cmakefile; do
 		mkdir build;
 		cd build;
 		echo Building Tests...;
-		cmake -DFOGLAMP_SRC="${FOGLAMP_SRC}" -DFOGLAMP_INCLUDE="${FOGLAMP_INCLUDE_DIRS}" -DFOGLAMP_LIB="${FOGLAMP_LIB_DIRS}" ..;
+		cmake -DFLEDGE_SRC="${FLEDGE_SRC}" -DFLEDGE_INCLUDE="${FLEDGE_INCLUDE_DIRS}" -DFLEDGE_LIB="${FLEDGE_LIB_DIRS}" ..;
 		rc=$?
 		if [ $rc != 0 ]; then
 			echo cmake failed for $dir;

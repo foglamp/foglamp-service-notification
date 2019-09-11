@@ -1,7 +1,7 @@
 #ifndef _BUILTIN_RULE_H
 #define _BUILTIN_RULE_H
 /*
- * FogLAMP Builtin rule class.
+ * Fledge Builtin rule class.
  *
  * Copyright (c) 2018 Dianomic Systems
  *

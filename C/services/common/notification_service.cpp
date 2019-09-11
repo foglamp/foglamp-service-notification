@@ -1,5 +1,5 @@
 /*
- * FogLAMP notification service class
+ * Fledge notification service class
  *
  * Copyright (c) 2018 Dianomic Systems
  *
@@ -70,10 +70,10 @@ NotificationService::~NotificationService()
 
 /**
  * Start the notification service
- * by connecting to FogLAMP core service.
+ * by connecting to Fledge core service.
  *
- * @param coreAddress	The FogLAMP core address
- * @param corePort	The FogLAMP core port
+ * @param coreAddress	The Fledge core address
+ * @param corePort	The Fledge core port
  * @return		True for success, false otherwise
  */
 bool NotificationService::start(string& coreAddress,
@@ -114,7 +114,7 @@ bool NotificationService::start(string& coreAddress,
 	if (!m_managerClient)
 	{
 		m_logger->fatal("Notification service '" + m_name + \
-				"' can not connect to FogLAMP at " + \
+				"' can not connect to Fledge at " + \
 				string(coreAddress + ":" + to_string(corePort)));
 
 		this->cleanupResources();
@@ -127,7 +127,7 @@ bool NotificationService::start(string& coreAddress,
 	if (!m_managerClient->addCategory(notificationConfig, true))
 	{
 		m_logger->fatal("Notification service '" + m_name + \
-				"' can not connect to FogLAMP ConfigurationManager at " + \
+				"' can not connect to Fledge ConfigurationManager at " + \
 				string(coreAddress + ":" + to_string(corePort)));
 
 		this->cleanupResources();
@@ -144,14 +144,14 @@ bool NotificationService::start(string& coreAddress,
 	if (!m_managerClient->addCategory(notificationServerConfig, true))
 	{
 		m_logger->fatal("Notification service '" + m_name + \
-				"' can not connect to FogLAMP ConfigurationManager at " + \
+				"' can not connect to Fledge ConfigurationManager at " + \
 				string(coreAddress + ":" + to_string(corePort)));
 
 		this->cleanupResources();
 		return false;
 	}
 
-	// Register this notification service with FogLAMP core
+	// Register this notification service with Fledge core
 	unsigned short listenerPort = m_api->getListenerPort();
 	unsigned short managementListener = m_managementApi->getListenerPort();
 	ServiceRecord record(m_name,
@@ -170,7 +170,7 @@ bool NotificationService::start(string& coreAddress,
 		return false;
 	}
 
-	// Register NOTIFICATION_CATEGORY to FogLAMP Core
+	// Register NOTIFICATION_CATEGORY to Fledge Core
 	unsigned int retryCount = 0;
 	while (m_managerClient->registerCategory(NOTIFICATION_CATEGORY) == false &&
 		++retryCount < 10)
@@ -185,15 +185,15 @@ bool NotificationService::start(string& coreAddress,
 	}
 
 	// Get Storage service
-	ServiceRecord storageInfo("FogLAMP Storage");
+	ServiceRecord storageInfo("Fledge Storage");
 	if (!m_managerClient->getService(storageInfo))
 	{
-		m_logger->fatal("Unable to find FogLAMP storage "
+		m_logger->fatal("Unable to find Fledge storage "
 				"connection info for service '" + m_name + "'");
 
 		this->cleanupResources();
 
-		// Unregister from FogLAMP
+		// Unregister from Fledge
 		m_managerClient->unregisterService();
 
 		return false;

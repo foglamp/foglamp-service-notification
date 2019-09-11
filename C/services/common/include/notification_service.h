@@ -1,7 +1,7 @@
 #ifndef _NOTIFICATION_SERVICE_H
 #define _NOTIFICATION_SERVICE_H
 /*
- * FogLAMP notification service.
+ * Fledge notification service.
  *
  * Copyright (c) 2018 Dianomic Systems
  *
@@ -17,7 +17,7 @@
 #include <reading.h>
 #include <storage_client.h>
 
-#define SERVICE_NAME		"FogLAMP Notification"
+#define SERVICE_NAME		"Fledge Notification"
 #define SERVICE_TYPE		"Notification"
 #define NOTIFICATION_CATEGORY	"NOTIFICATION"
 

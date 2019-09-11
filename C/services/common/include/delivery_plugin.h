@@ -1,7 +1,7 @@
 #ifndef _DELIVERY_PLUGIN_H
 #define _DELIVERY_PLUGIN_H
 /*
- * FogLAMP Delivery plugin class.
+ * Fledge Delivery plugin class.
  *
  * Copyright (c) 2018 Dianomic Systems
  *

@@ -1,7 +1,7 @@
 #ifndef _NOTIFICATION_SUBSCRIPTION_H
 #define _NOTIFICATION_SUBSCRIPTION_H
 /*
- * FogLAMP notification subscription manager.
+ * Fledge notification subscription manager.
  *
  * Copyright (c) 2018 Dianomic Systems
  *

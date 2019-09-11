@@ -1,5 +1,5 @@
 /*
- * FogLAMP notification service.
+ * Fledge notification service.
  *
  * Copyright (c) 2018 Dianomic Systems
  *

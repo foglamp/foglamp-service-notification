@@ -1,7 +1,7 @@
 #ifndef _NOTIFICATION_MANAGER_H
 #define _NOTIFICATION_MANAGER_H
 /*
- * FogLAMP notification manager.
+ * Fledge notification manager.
  *
  * Copyright (c) 2018 Dianomic Systems
  *

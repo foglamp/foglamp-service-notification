@@ -1,7 +1,7 @@
 #ifndef _THRESHOLD_RULE_H
 #define _THRESHOLD_RULE_H
 /*
- * FogLAMP Threshold builtin notification rule.
+ * Fledge Threshold builtin notification rule.
  *
  * Copyright (c) 2018 Dianomic Systems
  *

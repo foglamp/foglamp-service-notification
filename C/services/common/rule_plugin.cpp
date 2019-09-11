@@ -1,5 +1,5 @@
 /**
- * FogLAMP rule plugin class
+ * Fledge rule plugin class
  *
  * Copyright (c) 2018 Dianomic Systems
  *

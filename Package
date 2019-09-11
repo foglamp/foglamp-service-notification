@@ -1,13 +1,13 @@
 # A set of variables that define how we package this repository
 #
 service_name=notification
-exec_name=foglamp.services.${service_name}
+exec_name=fledge.services.${service_name}
 
 # Now build up the runtime requirements list. This has 3 components
 #   1. Generic packages we depend on in all architectures and package managers
 #   2. Architecture specific packages we depend on
 #   3. Package manager specific packages we depend on
-requirements="foglamp"
+requirements="fledge"
 
 case "$arch" in
         x86_64)

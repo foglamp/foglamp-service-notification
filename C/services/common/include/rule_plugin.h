@@ -1,7 +1,7 @@
 #ifndef _RULE_PLUGIN_H
 #define _RULE_PLUGIN_H
 /*
- * FogLAMP Rule plugin class.
+ * Fledge Rule plugin class.
  *
  * Copyright (c) 2018 Dianomic Systems
  *

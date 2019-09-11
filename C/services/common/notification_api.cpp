@@ -1,5 +1,5 @@
 /*
- * FogLAMP Notification API class for Notification micro service.
+ * Fledge Notification API class for Notification micro service.
  *
  * Copyright (c) 2018 Dianomic Systems
  *

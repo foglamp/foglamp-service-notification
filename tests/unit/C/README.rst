@@ -29,7 +29,7 @@ To run all the unit tests go to the directory scripts and execute the script
 This will run all unit tests and place the JUnit XML files in the directory results
 
 NOTE:
-the build process for C++ tests checks first the environment FOGLAMP_ROOT (pointing where FogLAMP has been built)
-If the variable is not set then the build process uses FOGLAMP_INCLUDE_DIRS and FOGLAMP_LIB_DIRS, assuming the FogLAMP dev package has been installed.
+the build process for C++ tests checks first the environment FLEDGE_ROOT (pointing where Fledge has been built)
+If the variable is not set then the build process uses FLEDGE_INCLUDE_DIRS and FLEDGE_LIB_DIRS, assuming the Fledge dev package has been installed.
 
-It's possible to override defaults by changing in RunAllTests.sh script the values of FOGLAMP_SRC or FOGLAMP_INCLUDE_DIRS and FOGLAMP_LIB_DIRS before executing it.
+It's possible to override defaults by changing in RunAllTests.sh script the values of FLEDGE_SRC or FLEDGE_INCLUDE_DIRS and FLEDGE_LIB_DIRS before executing it.

@@ -1,5 +1,5 @@
 /*
- * FogLAMP notification subscription.
+ * Fledge notification subscription.
  *
  * Copyright (c) 2018 Dianomic Systems
  *

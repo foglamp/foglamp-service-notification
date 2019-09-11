@@ -23,19 +23,19 @@ EXPECT_EXIT({
 		exit(1);
 	}
 
-	// If FOGLAMP_ROOT is not set we should no delivery plugins
-	if (!getenv("FOGLAMP_ROOT"))
+	// If FLEDGE_ROOT is not set we should no delivery plugins
+	if (!getenv("FLEDGE_ROOT"))
 	{
 		ret = instances.getJSONDelivery().compare("[]") == 0;
 		if (!ret)
 		{
-			cerr << "Delivery plugin array must be empty without FOGLAMP_ROOT" << endl;
+			cerr << "Delivery plugin array must be empty without FLEDGE_ROOT" << endl;
 		}
 	}
 	else
 	{
-		// If FOGLAMP_ROOT is set we should have some delivery plugins
-		string deliveryPluginDir(getenv("FOGLAMP_ROOT"));
+		// If FLEDGE_ROOT is set we should have some delivery plugins
+		string deliveryPluginDir(getenv("FLEDGE_ROOT"));
 		deliveryPluginDir += "/plugins/notificationDelivery";
 		DIR* dir = opendir(deliveryPluginDir.c_str());
 		bool pluginsFound = false;
