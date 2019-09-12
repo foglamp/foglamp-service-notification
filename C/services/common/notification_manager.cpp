@@ -660,16 +660,27 @@ bool NotificationInstance::handleState(bool evalRet)
 		break;
 	}
 
+	// Update state
+	NotificationState newState = setTriggered ?
+		  NotificationState::StateTriggered :
+		  NotificationState::StateCleared;
+
+	if (m_state != newState)
+	{
+		Logger::getLogger()->info("Notification %s has %s", m_name.c_str(), newState == NotificationState::StateTriggered ? "triggered" : "cleared");
+		m_state = newState;
+	}
+
 	if (ret)
 	{
 		// Update last sent time
 		m_lastSent = now;
+		char dateStr[80];
+		struct tm tm;
+		time_t tim = now + nType.retriggerTime;
+		asctime_r(localtime_r(&tim, &tm), dateStr);
+		Logger::getLogger()->info("Notification %s will not be sent again until after %s", m_name.c_str(), dateStr);
 	}
-
-	// Update state
-	m_state = setTriggered ?
-		  NotificationState::StateTriggered :
-		  NotificationState::StateCleared;
 
 	return ret;
 }
