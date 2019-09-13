@@ -20,8 +20,7 @@
 #include <delivery_plugin.h>
 #include <string.h>
 #include "plugin_api.h"
-#include <overmax_rule.h>
-#include <undermin_rule.h>
+#include <threshold_rule.h>
 #include <notification_subscription.h>
 #include <notification_queue.h>
 #include <reading.h>
@@ -214,8 +213,7 @@ NotificationManager::NotificationManager(const std::string& serviceName,
 	/**
 	 * Add here all the builtin rules we want to make available:
 	 */
-	this->registerBuiltinRule<OverMaxRule>("OverMaxRule");
-	this->registerBuiltinRule<UnderMinRule>("UnderMinRule");
+	this->registerBuiltinRule<ThresholdRule>("Threshold");
 
 	// Register statistics
 	ManagementApi *management = ManagementApi::getInstance();
@@ -230,6 +228,15 @@ NotificationManager::NotificationManager(const std::string& serviceName,
  */
 NotificationManager::~NotificationManager()
 {
+	lock_guard<mutex> guard(m_instancesMutex);
+	// Mark is instance as zombie
+        for (auto it = m_instances.begin();
+		  it != m_instances.end();
+		  ++it)
+	{
+		(*it).second->markAsZombie();
+	}
+	
 	// Delete each element in m_instances
 	for (auto it = m_instances.begin();
 		  it != m_instances.end();
@@ -327,7 +334,15 @@ void NotificationManager::addInstance(const string& instanceName,
 									  type,
 									  rule,
 									  delivery);
-		m_instances[instanceName] = instance;
+		if (instance)
+		{
+			m_instances[instanceName] = instance;
+		}
+		else
+		{
+			 Logger::getLogger()->error("Cannot setup new instance for key %s",
+						    instanceName.c_str());
+		}
 	}
 }
 
@@ -336,8 +351,10 @@ void NotificationManager::addInstance(const string& instanceName,
  *
  * @return	JSON string with all loaded instances
  */
-string NotificationManager::getJSONInstances() const
+string NotificationManager::getJSONInstances()
 {
+	// Protect changes to m_instances
+	lock_guard<mutex> guard(m_instancesMutex);
 	string ret = "";
 	for (auto it = m_instances.begin();
 		  it != m_instances.end();
@@ -446,27 +463,27 @@ PLUGIN_HANDLE NotificationManager::loadDeliveryPlugin(const string& loadDelivery
  *			"one shot", "retriggered", "toggled"
  * @return		The NotificationType value
  */
-NOTIFICATION_TYPE NotificationManager::parseType(const string& type)
+E_NOTIFICATION_TYPE NotificationManager::parseType(const string& type)
 {
-	NOTIFICATION_TYPE ret;
+	E_NOTIFICATION_TYPE ret;
 	const char* ptrType = type.c_str();
 
 	if (strcasecmp(ptrType, "one shot") == 0 ||
 	    strcasecmp(ptrType, "oneshot") == 0)
 	{
-		ret = NOTIFICATION_TYPE::OneShot;
+		ret = E_NOTIFICATION_TYPE::OneShot;
 	}
 	else if (strcasecmp(ptrType, "toggled") == 0)
 	{
-		ret = NOTIFICATION_TYPE::Toggled;
+		ret = E_NOTIFICATION_TYPE::Toggled;
 	}
 	else if (strcasecmp(ptrType, "retriggered") == 0)
 	{
-		ret = NOTIFICATION_TYPE::Retriggered;
+		ret = E_NOTIFICATION_TYPE::Retriggered;
 	}
 	else
 	{
-		ret = NOTIFICATION_TYPE::None;
+		ret = E_NOTIFICATION_TYPE::None;
 	}
 	return ret;
 }
@@ -474,21 +491,21 @@ NOTIFICATION_TYPE NotificationManager::parseType(const string& type)
 /**
  * Return string value of NotificationType enum
  *
- * @param    type	The NotificationType value
+ * @param    nType	The NotificationType value
  * @return		String value of NotificationType value
  */
-string NotificationInstance::getTypeString(NOTIFICATION_TYPE type)
+string NotificationInstance::getTypeString(NOTIFICATION_TYPE nType)
 {
 	string ret = "";
-	switch (type)
+	switch (nType.type)
 	{
-		case NOTIFICATION_TYPE::OneShot:
+		case E_NOTIFICATION_TYPE::OneShot:
 			ret = "One Shot";	
 			break;
-		case NOTIFICATION_TYPE::Toggled:
+		case E_NOTIFICATION_TYPE::Toggled:
 			ret = "Toggled";
 			break;
-		case NOTIFICATION_TYPE::Retriggered:
+		case E_NOTIFICATION_TYPE::Retriggered:
 			ret = "Retriggered";
 			break;
 		default:
@@ -580,7 +597,7 @@ RulePlugin* NotificationManager::findBuiltinRule(const string& ruleName)
  * Register a builtin rule class, derived form RulePlugin class
  *
  * Call this routine with the class name T and its "string" name:
- * registerBuiltinRule<OverMaxRule>("OverMaxRule");
+ * registerBuiltinRule<ThresholdRule>("Threshold");
  *
  * @param   ruleName	The built in rule name
  */
@@ -596,131 +613,73 @@ NotificationManager::registerBuiltinRule(const std::string& ruleName)
 /**
  * Check whether a notification can be sent
  *
+ * A notification is sent accordingly to the notification type,
+ * value of "plugin_eval" call and the maximum repeat frequency.
+ *
  * @param    evalRet	Notification data evaluation
  *			via rule "plugin_eval" call
  * @return	True if notification has to be sent or false
  */
 bool NotificationInstance::handleState(bool evalRet)
-{	
+{
+	bool setTriggered = false;
 	bool ret = false;
-	time_t now = time(NULL);
-	NotificationInstance::NotificationType type = this->getType();
+	NOTIFICATION_TYPE nType = this->getType();
 
-	switch(type)
+	time_t now = time(NULL);
+	time_t diffTime = now - m_lastSent;
+
+	switch(nType.type)
 	{
+	case NotificationInstance::OneShot:
 	case NotificationInstance::Toggled:
 		if (m_state == NotificationState::StateTriggered)
 		{
-			if (evalRet == false)
-			{
-				// Set cleared
-				m_state = NotificationState::StateCleared;
-				m_lastSent = now;
-				// Notify toggled
-				ret = true;
-			}
-			else
-			{
-				if ((now - m_lastSent) > DEFAULT_TOGGLE_FREQUENCY)
-				{
-					m_lastSent = now;
-					// Notify triggered
-					ret = true;
-				}
-				else
-				{
-					// Just log
-				}
-			}
+			// Set state depends on evalRet
+			setTriggered = evalRet;
+			// Try sending "cleared" when evaluation is false (Toggled only)
+			ret = !evalRet && (nType.type == E_NOTIFICATION_TYPE::Toggled);
 		}
 		else
 		{
-			if (evalRet == true)
-			{
-				// Set Triggered 
-				m_state = NotificationState::StateTriggered;
-				m_lastSent = now;
-				// Notify toggled
-				ret = true;
-			}
-		}
-
-		break;
-	
-	case NotificationInstance::OneShot:
-		if (m_state == NotificationState::StateTriggered)
-		{
-			if (evalRet == false)
-			{
-				// Set cleared
-				m_state = NotificationState::StateCleared;
-			}
-			else
-			{
-				if ((now - m_lastSent) > DEFAULT_ONESHOT_FREQUENCY)
-				{
-					// Update last sent time
-					m_lastSent = now;
-					// Send notification
-					ret = true;
-				}
-				else
-				{
-					// Just log
-				}
-			}
-		}
-		else
-		{
-			if (evalRet == true)
-			{
-				// Set triggered
-				m_state = NotificationState::StateTriggered;
-				// Update last sent time
-				m_lastSent = now;
-				// Send notification
-				ret = true;
-			}
+			// Try sending "triggered" when evaluation is true
+			ret = evalRet && (diffTime > nType.retriggerTime);
+			// Here state change depends on sending value
+			setTriggered = ret;
 		}
 		break;
 
 	case NotificationInstance::Retriggered:
-		if (evalRet == true)
-		{
-			if (m_state == NotificationState::StateTriggered)
-			{
-				if ((now - m_lastSent) > DEFAULT_RETRIGGER_FREQUENCY)
-				{
-					// Update last sent time
-					m_lastSent = now;
-					// Send notification
-					ret = true;
-				}
-				else
-				{
-					// Just log
-				}
-			}
-			else
-			{
-				// Set triggered
-				m_state = NotificationState::StateTriggered;
-				// Update last sent time
-				m_lastSent = now;
-				// Send notification
-				ret = true;
-			}
-		}
-		else
-		{
-			// Set cleared state
-			m_state = NotificationState::StateCleared;
-		}
-
+		// Set state depends on evalRet
+		setTriggered = evalRet;
+		// Try sending "triggered" when evaluation is true
+		ret = evalRet && diffTime > nType.retriggerTime;
 		break;
 
 	default:
 		break;
+	}
+
+	// Update state
+	NotificationState newState = setTriggered ?
+		  NotificationState::StateTriggered :
+		  NotificationState::StateCleared;
+
+	if (m_state != newState)
+	{
+		Logger::getLogger()->info("Notification %s has %s", m_name.c_str(), newState == NotificationState::StateTriggered ? "triggered" : "cleared");
+		m_state = newState;
+	}
+
+	if (ret)
+	{
+		// Update last sent time
+		m_lastSent = now;
+		char dateStr[80];
+		struct tm tm;
+		time_t tim = now + nType.retriggerTime;
+		asctime_r(localtime_r(&tim, &tm), dateStr);
+		Logger::getLogger()->info("Notification %s will not be sent again until after %s", m_name.c_str(), dateStr);
 	}
 
 	return ret;
@@ -873,19 +832,23 @@ bool NotificationManager::APIcreateEmptyInstance(const string& name)
 	payload += "\"description\" :{\"description\" : \"Description of this notification\", "
 			 "\"displayName\" : \"Description\", \"order\" : \"1\","
 			 "\"type\": \"string\", \"default\": \"\"}, "
-			 "\"rule\" : {\"description\": \"Rule to evaluate\", "
+		   "\"rule\" : {\"description\": \"Rule to evaluate\", "
 			 "\"displayName\" : \"Rule\", \"order\" : \"2\","
 			 "\"type\": \"string\", \"default\": \"\"}, "
-			 "\"channel\": {\"description\": \"Channel to send alert on\", "
+		   "\"channel\": {\"description\": \"Channel to send alert on\", "
 			 "\"displayName\" : \"Channel\", \"order\" : \"3\","
 			 "\"type\": \"string\", \"default\": \"\"}, "
-			 "\"notification_type\": {\"description\": \"Type of notification\", \"type\": "
+		   "\"notification_type\": {\"description\": \"Type of notification\", \"type\": "
 			 "\"enumeration\", \"options\": [ \"one shot\", \"retriggered\", \"toggled\" ], "
 			 "\"displayName\" : \"Type\", \"order\" : \"4\","
 			 "\"default\" : \"one shot\"}, "
-			 "\"enable\": {\"description\" : \"Enabled\", "
+		   "\"enable\": {\"description\" : \"Enabled\", "
 			 "\"displayName\" : \"Enabled\", \"order\" : \"5\","
-			 "\"type\": \"boolean\", \"default\": \"false\"}}";
+			 "\"type\": \"boolean\", \"default\": \"false\"}, " 
+		   "\"retrigger_time\": {\"description\" : \"Retrigger time in seconds for sending a new notification.\", "
+			 "\"displayName\" : \"Retrigger Time\", \"order\" : \"6\", "
+			 "\"type\": \"integer\",  \"default\": \"" + to_string(DEFAULT_RETRIGGER_TIME) + "\"} }";
+
 
 	DefaultConfigCategory notificationConfig(name, payload);
 	notificationConfig.setDescription("Notification " + name);
@@ -893,10 +856,13 @@ bool NotificationManager::APIcreateEmptyInstance(const string& name)
 	// Don't update any existing configuration, just replace all 
 	if (m_managerClient->addCategory(notificationConfig, false))
 	{
+		NOTIFICATION_TYPE type;
+		type.retriggerTime = DEFAULT_RETRIGGER_TIME;
+		type.type = E_NOTIFICATION_TYPE::OneShot;
 		// Create the empty Notification instance
 		this->addInstance(name,
 				  false,
-				  NOTIFICATION_TYPE::OneShot,
+				  type,
 				  NULL,
 				  NULL);
 
@@ -1247,7 +1213,6 @@ bool NotificationInstance::updateInstance(const string& name,
 					  const ConfigCategory& newConfig)
 {
 	bool ret = false;
-
 	bool enabled;
 	string rulePluginName;
 	string deliveryPluginName;
@@ -1282,18 +1247,20 @@ bool NotificationInstance::updateInstance(const string& name,
 		{
 			// Get new instance
 			// Protect access to m_instances
-			instances->lockInstances();
-			auto i = instances->getInstances().find(name);
-			bool ret = i != instances->getInstances().end();
-			instances->unlockInstances();
-			if (ret)
 			{
-				// Create a new subscription
-				subscriptions->createSubscription((*i).second);
+				lock_guard<mutex> guard(instances->m_instancesMutex);
+				bool ret;
+				auto i = instances->getInstances().find(name);
+				ret = i != instances->getInstances().end();
+				if (ret)
+				{
+					// Create a new subscription
+					subscriptions->createSubscription((*i).second);
 
-				Logger::getLogger()->info("Succesfully enabled notification instance '%s'",
-							  name.c_str());
-				enabled = true;
+					Logger::getLogger()->info("Succesfully enabled notification instance '%s'",
+								  name.c_str());
+					enabled = true;
+				}
 			}
 		}
 		else
@@ -1324,10 +1291,11 @@ bool NotificationInstance::updateInstance(const string& name,
 		for (auto a = assets.begin();
 			  a != assets.end(); )
 		{
+			lock_guard<mutex> guard(instances->m_instancesMutex);
 			subscriptions->removeSubscription((*a).getAssetName(),
 							  ruleName);
-			// Remove asseet
-			assets.erase(a);
+			// Remove asset
+			a = assets.erase(a);
 		}
 
 		// Just remove current instance
@@ -1394,10 +1362,11 @@ bool NotificationInstance::updateInstance(const string& name,
 			for (auto a = assets.begin();
 			          a != assets.end(); )
 			{
+				lock_guard<mutex> guard(instances->m_instancesMutex);
 				subscriptions->removeSubscription((*a).getAssetName(),
 								  ruleName);
 				// Remove asseet
-				assets.erase(a);
+				a = assets.erase(a);
 			}
 		}
 
@@ -1409,15 +1378,18 @@ bool NotificationInstance::updateInstance(const string& name,
 		{
 			// Get new instance
 			// Protect access to m_instances
-			instances->lockInstances();
-			auto i = instances->getInstances().find(name);
-			bool ret = i != instances->getInstances().end();
-			instances->unlockInstances();
-			if (ret)
 			{
-				// Create a new subscription
-				subscriptions->createSubscription((*i).second);
-				retCode = true;
+				lock_guard<mutex> guard(instances->m_instancesMutex);
+				//instances->lockInstances();
+				auto i = instances->getInstances().find(name);
+				bool ret = i != instances->getInstances().end();
+				//instances->unlockInstances();
+				if (ret)
+				{
+					// Create a new subscription
+					subscriptions->createSubscription((*i).second);
+					retCode = true;
+				}
 			}
 		}
 
@@ -1475,9 +1447,17 @@ bool NotificationManager::removeInstance(const string& instanceName)
 void NotificationManager::collectZombies()
 {
 	lock_guard<mutex> guard(m_instancesMutex);
-	for (auto r = m_instances.begin(); r != m_instances.end(); ++r)
+	for (auto r = m_instances.begin();
+		  r != m_instances.end(); )
 	{
-		if (r->second->isZombie())
+		if (!r->second)
+		{
+			Logger::getLogger()->debug("Instance has NULL object, size %lu",
+						   m_instances.size());
+		}
+
+		if (r->second &&
+		    r->second->isZombie())
 		{
 			Logger::getLogger()->debug("Instance %s removed from m_instances",
 					   r->second->getName().c_str());
@@ -1485,7 +1465,11 @@ void NotificationManager::collectZombies()
 			delete r->second;
 			r->second = NULL;
 			// Remove element
-			m_instances.erase(r);
+			r = m_instances.erase(r);
+		}
+		else
+		{
+			++r;
 		}
 	}
 }
@@ -1497,7 +1481,7 @@ void NotificationManager::collectZombies()
  * @param    enabled			Enable output parameter.
  * @param    rulePluginName		The rule plugin output parameter.
  * @param    deliveryPluginName		The delivery plugin output parameter.
- * @param    type			The notification type output parameter.
+ * @param    nType			The notification type output parameter.
  * @param    customText			The custom text output parameter.
  * @return				True is configuration parsing succeded,
  *					false otherwise.
@@ -1506,9 +1490,10 @@ bool NotificationManager::getConfigurationItems(const ConfigCategory& config,
 						bool& enabled,
 						string& rulePluginName,
 						string& deliveryPluginName,
-						NOTIFICATION_TYPE& type,
+						NOTIFICATION_TYPE& nType,
 						string& customText)
 {
+	long retriggerTime = DEFAULT_RETRIGGER_TIME;
 	string notificationName = config.getName();
 	// The rule plugin to use
 	rulePluginName = config.getValue("rule");
@@ -1517,6 +1502,18 @@ bool NotificationManager::getConfigurationItems(const ConfigCategory& config,
 	// Is it enabled?
 	enabled = config.getValue("enable").compare("true") == 0 ||
 		  config.getValue("enable").compare("True") == 0;
+
+	// Re-trigger time
+	if (config.itemExists("retrigger_time") &&
+	    !config.getValue("retrigger_time").empty())
+	{
+		long new_value = atol(config.getValue("retrigger_time").c_str());
+		if (new_value)
+		{
+			retriggerTime = new_value;
+		}
+	}
+	nType.retriggerTime = retriggerTime;
 
 	// Get notification type
 	string notification_type;
@@ -1532,8 +1529,8 @@ bool NotificationManager::getConfigurationItems(const ConfigCategory& config,
 				notificationName + "' configuration.");
 		return false;
 	}
-	type = this->parseType(notification_type);
-	if (type == NOTIFICATION_TYPE::None)
+	nType.type = this->parseType(notification_type);
+	if (nType.type == E_NOTIFICATION_TYPE::None)
 	{
 		m_logger->fatal("Found unsupported Notification type '" + \
 				notification_type + \
@@ -1593,9 +1590,10 @@ bool NotificationManager::APIdeleteInstance(const string& instanceName)
 	NotificationManager* notifications = NotificationManager::getInstance();
 	NotificationInstance* instance = NULL;
 
-	notifications->lockInstances();
+	{
+	lock_guard<mutex> guard(m_instancesMutex);
+
 	instance = notifications->getNotificationInstance(instanceName);
-	notifications->unlockInstances();
 
 	if (instance)
 	{
@@ -1616,9 +1614,10 @@ bool NotificationManager::APIdeleteInstance(const string& instanceName)
 				subscriptions->removeSubscription((*a).getAssetName(),
 								   ruleName);
 				// Remove asseet
-				assets.erase(a);
+				a = assets.erase(a);
 			}
 		}
+	}
 	}
 
 	bool ret = this->removeInstance(instanceName);

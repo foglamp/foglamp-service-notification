@@ -85,7 +85,6 @@ void NotificationSubscription::unregisterSubscriptions()
 	m_subscriptionMutex.lock();
 	std:map<std::string, std::vector<SubscriptionElement>>&
 		subscriptions = this->getAllSubscriptions();
-	m_subscriptionMutex.unlock();
 
 	for (auto it = subscriptions.begin();
 		  it != subscriptions.end();
@@ -94,11 +93,11 @@ void NotificationSubscription::unregisterSubscriptions()
 		// Unregister interest
 		m_storage.unregisterAssetNotification((*it).first,
 						      callBackURL + (*it).first);
-
 		m_logger->info("Unregistering asset '" + \
 			       (*it).first + "' for notification " + \
 			       this->getNotificationName());
 	}
+	m_subscriptionMutex.unlock();
 }
 
 /**
@@ -201,28 +200,28 @@ bool NotificationSubscription::addSubscription(const std::string& assetName,
  */
 EvaluationType NotificationSubscription::getEvalType(const Value& value)
 {
-	// Default is latest, so time = 0
+	// Default is SingleItem, so set time = 0
 	time_t interval = 0;
-	EvaluationType::EVAL_TYPE evaluation = EvaluationType::Latest;
+	EvaluationType::EVAL_TYPE evaluation = EvaluationType::SingleItem;
 
-	if (value.HasMember("window"))
+	if (value.HasMember("All"))
 	{
-		interval = value["window"].GetUint();
-		evaluation = EvaluationType::Window;
+		interval = value["All"].GetUint();
+		evaluation = EvaluationType::All;
 	}
-	else if (value.HasMember("average"))
+	else if (value.HasMember("Average"))
 	{
-		interval = value["average"].GetUint();
+		interval = value["Average"].GetUint();
 		evaluation = EvaluationType::Average;
 	}
-	else if (value.HasMember("minimum"))
+	else if (value.HasMember("Minimum"))
 	{
-		interval = value["minimum"].GetUint();
+		interval = value["Minimum"].GetUint();
 		evaluation = EvaluationType::Minimum;
 	}
-	else if (value.HasMember("maximum"))
+	else if (value.HasMember("Maximum"))
 	{
-		interval = value["maximum"].GetUint();
+		interval = value["Maximum"].GetUint();
 		evaluation = EvaluationType::Maximum;
 	}
 
@@ -231,6 +230,8 @@ EvaluationType NotificationSubscription::getEvalType(const Value& value)
 
 /**
  * Unregister a single subscription from storage layer
+ *
+ * The caller of this routine must hold the subscriptions lock
  *
  * @param    assetName		The asset name to unregister
  */
@@ -242,11 +243,9 @@ void NotificationSubscription::unregisterSubscription(const string& assetName)
 	string callBackURL = api->getCallBackURL();
 
 	// Get all NotificationSubscriptions
-	m_subscriptionMutex.lock();
 	std:map<std::string, std::vector<SubscriptionElement>>&
 		subscriptions = this->getAllSubscriptions();
 	auto it = subscriptions.find(assetName);
-	m_subscriptionMutex.unlock();
 
 	if (it != subscriptions.end())
 	{
@@ -351,7 +350,6 @@ void NotificationSubscription::removeSubscription(const string& assetName,
 		allSubscriptions = this->getAllSubscriptions();
 	auto it = allSubscriptions.find(assetName);
 	bool ret = it != allSubscriptions.end();
-	this->unlockSubscriptions();
 
 	// For the found assetName subscriptions
 	// 1- Unsubscribe notification interest for assetNamme
@@ -360,7 +358,6 @@ void NotificationSubscription::removeSubscription(const string& assetName,
 	// 4- Remove Subscription
 	if (ret)
 	{
-		// Get Notification queue instance
 		vector<SubscriptionElement>& elems = (*it).second;
 		if (elems.size() == 1)
 		{
@@ -380,9 +377,7 @@ void NotificationSubscription::removeSubscription(const string& assetName,
 		{
 			// Get notification rule object 
 			string notificationName = (*e).getNotificationName();
-			manager->lockInstances();
 			NotificationInstance* instance = manager->getNotificationInstance(notificationName);
-			manager->unlockInstances();
 
 			if (instance &&
 			    !instance->isZombie())
@@ -395,7 +390,7 @@ void NotificationSubscription::removeSubscription(const string& assetName,
 								   notificationName.c_str(),
 								   currentRule.c_str(),
 								   assetName.c_str());
-					elems.erase(e);
+					e = elems.erase(e);
 				}
 				else
 				{
@@ -422,9 +417,8 @@ void NotificationSubscription::removeSubscription(const string& assetName,
 		// 4- Remove subscription if array is empty
 		if (!elems.size())
 		{
-			this->lockSubscriptions();
 			allSubscriptions.erase(it);
-			this->unlockSubscriptions();
 		}
 	}
+	this->unlockSubscriptions();
 }

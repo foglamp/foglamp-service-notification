@@ -1,5 +1,5 @@
 /**
- * FogLAMP OverMax builtin notification rule
+ * FogLAMP Threshold builtin notification rule
  *
  * Copyright (c) 2018 Dianomic Systems
  *
@@ -8,69 +8,83 @@
  * Author: Massimiliano Pinto
  */
 
-#include <overmax_rule.h>
+#include <threshold_rule.h>
 
-#define RULE_NAME "OverMaxRule"
+#define RULE_NAME "Threshold"
 #define DEFAULT_TIME_INTERVAL "30"
 
 /**
  * Rule specific default configuration
  */
-#define RULE_DEFAULT_CONFIG \
-			"\"description\": { " \
-				"\"description\": \"Generate a notification if the value " \
-					"of a configured datapoint within an asset name " \
-					"exceeds a configured value.\", " \
-				"\"type\": \"string\", " \
-				"\"default\": \"Generate a notification if the value " \
-					"of a configured datapoint within an asset name " \
-					"exceeds a configured value.\", " \
-				"\"displayName\" : \"Rule\", " \
-				"\"order\": \"1\" }, " \
-			"\"asset\" : { " \
-				"\"description\": \"The asset name for which " \
-					"notifications will be generated.\", " \
-				"\"type\": \"string\", " \
-				"\"default\": \"\", " \
-				"\"displayName\" : \"Asset name\", " \
-				"\"order\": \"2\" }, " \
-			"\"datapoint\" : { " \
-				"\"description\": \"The datapoint within the asset name " \
-					"for which notifications will be generated.\", " \
-				"\"type\": \"string\", " \
-				"\"default\": \"\", " \
-				"\"displayName\" : \"Datapoint name\", " \
-				"\"order\": \"3\" }, " \
-			"\"evaluation_type\": {" \
-				"\"description\": \"The rule evaluation type\", " \
-				"\"type\": \"enumeration\", " \
-					"\"options\": [ " \
-					"\"window\", \"maximum\", \"minimum\", \"average\", \"latest\" ], " \
-				"\"default\" : \"latest\", " \
-				"\"displayName\" : \"Evaluation type\", \"order\": \"4\" }, " \
-			"\"time_window\" : { " \
-				"\"description\": \"Duration of the time window, in seconds, " \
-					"for collecting data points except for 'latest' evaluation.\", " \
-				"\"type\": \"integer\" , " \
-				"\"default\": \"" DEFAULT_TIME_INTERVAL "\", " \
-				"\"displayName\" : \"Time window\", " \
-				"\"order\": \"5\" }, " \
-			"\"trigger_value\" : { " \
-				"\"description\": \"Value at which to trigger a notification.\", " \
-				"\"type\": \"float\" , " \
-				"\"default\": \"0.0\", " \
-				"\"displayName\" : \"Trigger value\", " \
-				"\"order\": \"6\" }"
+static const char *default_config = QUOTE({
+			"plugin": {
+				"description": "Generate a notification when datapoint value crosses a boundary.",
+				"type": "string",
+				"default": RULE_NAME,
+				"displayName" : "Plugin",
+				"readonly": "true"
+				},
+			"description": {
+				"description": "Generate a notification when datapoint value crosses a boundary.",
+				"type": "string",
+				"default": "Generate a notification if the value of a configured datapoint within an asset name exceeds a configured value.",
+				"displayName" : "Rule",
+				"readonly": "true"
+				},
+			"asset" : {
+				"description": "The asset name for which notifications will be generated.",
+				"type": "string",
+				"default": "",
+				"displayName" : "Asset name",
+				"order": "1"
+				},
+			"datapoint" : {
+				"description": "The datapoint within the asset name for which notifications will be generated.",
+				"type": "string",
+				"default": "",
+				"displayName" : "Datapoint name",
+				"order": "2"
+				},
+			"condition" : {
+				"description": "The condition to evalaute", 
+				"type": "enumeration",
+				"options": [ ">", ">=", "<", "<=" ],
+				"default" : ">",
+				"displayName" : "Condition",
+				"order": "3"
+				},
+			"trigger_value" : {
+				"description": "Value at which to trigger a notification.",
+				"type": "float",
+				"default": "0.0",
+				"displayName" : "Trigger value",
+				"order": "4"
+				},
+			"evaluation_data": {
+				"description": "The rule evaluation data: single item or window", 
+				"type": "enumeration",
+				"options": [ "Single Item", "Window"],
+				"default" : "Single Item",
+				"displayName" : "Evaluation data",
+				"order": "5"
+				},
+			"window_data": {
+				"description": "Window data evaluation type",
+				"type": "enumeration",
+				"options": [ "Maximum", "Minimum", "Average"],
+				"default" : "Average",
+				"displayName" : "Window evaluation",
+				"order": "6"
+				},
+			"time_window" : {
+				"description": "Duration of the time window, in seconds, for collecting data points",
+				"type": "integer",
+				"default": DEFAULT_TIME_INTERVAL, 
+				"displayName" : "Time window",
+				"order": "7"
+				}
+	});
 
-#define BUITIN_RULE_DESC "\"plugin\": {\"description\": \"The " RULE_NAME " notification rule plugin " \
-					"triggers a notification when reading data exceed an absolute limit value.\", " \
-				"\"type\": \"string\", \"default\": \"" RULE_NAME "\", " \
-				"\"order\": \"7\", " \
-				"\"displayName\" : \"The " RULE_NAME " notification rule plugin " \
-					"triggers a notification when reading data exceed an absolute limit value.\", " \
-				"\"readonly\": \"true\"}"
-
-#define RULE_DEFAULT_CONFIG_INFO "{" BUITIN_RULE_DESC ", " RULE_DEFAULT_CONFIG "}"
 
 using namespace std;
 
@@ -83,33 +97,33 @@ static PLUGIN_INFORMATION ruleInfo = {
 	0,				// Flags
 	PLUGIN_TYPE_NOTIFICATION_RULE,	// Type
 	"1.0.0",			// Interface version
-	RULE_DEFAULT_CONFIG_INFO	// Configuration
+	default_config			// Configuration
 };
 
 /**
- * OverMaxRule builtin rule constructor
+ * ThresholdRule builtin rule constructor
  *
  * Call parent class RulePlugin constructor
  * passing a NULL plugin handle 
  *
  * @param    name	The builtin rule name
  */
-OverMaxRule::OverMaxRule(const std::string& name) :
+ThresholdRule::ThresholdRule(const std::string& name) :
 			 RulePlugin(name, NULL)
 {
 }
 
 /**
- * OverMaxRule builtin rule destructor
+ * ThresholdRule builtin rule destructor
  */
-OverMaxRule::~OverMaxRule()
+ThresholdRule::~ThresholdRule()
 {
 }
 
 /**
  * Return rule info
  */
-PLUGIN_INFORMATION* OverMaxRule::getInfo()
+PLUGIN_INFORMATION* ThresholdRule::getInfo()
 {       
 	return &ruleInfo;
 }
@@ -120,7 +134,7 @@ PLUGIN_INFORMATION* OverMaxRule::getInfo()
  * @param    config	The rule configuration category data.
  * @return		The rule handle.
  */
-PLUGIN_HANDLE OverMaxRule::init(const ConfigCategory& config)
+PLUGIN_HANDLE ThresholdRule::init(const ConfigCategory& config)
 {
 	BuiltinRule* builtinRule = new BuiltinRule();
 	m_instance = (PLUGIN_HANDLE)builtinRule;
@@ -134,7 +148,7 @@ PLUGIN_HANDLE OverMaxRule::init(const ConfigCategory& config)
 /**
  * Free rule resources
  */
-void OverMaxRule::shutdown()
+void ThresholdRule::shutdown()
 {
 	BuiltinRule* handle = (BuiltinRule *)m_instance;
 	// Delete plugin handle
@@ -146,7 +160,7 @@ void OverMaxRule::shutdown()
  *
  * @return	JSON string
  */
-string OverMaxRule::triggers()
+string ThresholdRule::triggers()
 {
 	string ret;
 	BuiltinRule* handle = (BuiltinRule *)m_instance;
@@ -195,7 +209,7 @@ string OverMaxRule::triggers()
  * @return			True if the rule was triggered,
  *				false otherwise.
  */
-bool OverMaxRule::eval(const string& assetValues)
+bool ThresholdRule::eval(const string& assetValues)
 {
 	Document doc;
 	doc.Parse(assetValues.c_str());
@@ -242,7 +256,7 @@ bool OverMaxRule::eval(const string& assetValues)
  *
  * @return	 A JSON string
  */
-string OverMaxRule::reason() const
+string ThresholdRule::reason() const
 {
 	BuiltinRule* handle = (BuiltinRule *)m_instance;
 
@@ -258,9 +272,9 @@ string OverMaxRule::reason() const
  *
  * @param    newConfig		The new configuration for the plugin
  */
-void OverMaxRule::reconfigure(const string& newConfig)
+void ThresholdRule::reconfigure(const string& newConfig)
 {
-	ConfigCategory  config("overmax", newConfig);
+	ConfigCategory  config("threshold", newConfig);
 	this->configure(config);
 }
 
@@ -273,7 +287,7 @@ void OverMaxRule::reconfigure(const string& newConfig)
  * @return			True if limit is hit,
  *				false otherwise
  */
-bool OverMaxRule::checkLimit(const Value& point,
+bool ThresholdRule::checkLimit(const Value& point,
 			     double limitValue)
 {
 	bool ret = false;
@@ -282,11 +296,22 @@ bool OverMaxRule::checkLimit(const Value& point,
 	if (point.GetType() == kNumberType)
 	{
 		if (point.IsDouble())
-		{       
-			if (point.GetDouble() > limitValue)
-			{       
-				ret = true;
-			}
+		{
+			switch (m_condition)
+			{
+				case THRESHOLD_GREATER:
+					ret = point.GetDouble() > limitValue;
+					break;
+				case THRESHOLD_GREATER_EQUAL:
+					ret = point.GetDouble() >= limitValue;
+					break;
+				case THRESHOLD_LESS:
+					ret = point.GetDouble() < limitValue;
+					break;
+				case THRESHOLD_LESS_EQUAL:
+					ret = point.GetDouble() <= limitValue;
+					break;
+                        }
 		}
 		else
 		{
@@ -298,16 +323,40 @@ bool OverMaxRule::checkLimit(const Value& point,
 				if (point.IsInt() ||
 				    point.IsUint())
 				{
-					if (point.GetInt() > limitValue)
+					switch (m_condition)
 					{
-						ret = true;
+						case THRESHOLD_GREATER:
+							ret = point.GetInt() > limitValue;
+							break;
+						case THRESHOLD_GREATER_EQUAL:
+							ret = point.GetInt() >= limitValue;
+							break;
+						case THRESHOLD_LESS:
+							ret = point.GetInt() < limitValue;
+							break;
+						case THRESHOLD_LESS_EQUAL:
+							ret = point.GetInt() <= limitValue;
+							break;
+
 					}
 				}
 				else
 				{
-					if (point.GetInt64() > limitValue)
+					switch (m_condition)
 					{
-						ret = true;
+						case THRESHOLD_GREATER:
+							ret = point.GetInt64() > limitValue;
+							break;
+						case THRESHOLD_GREATER_EQUAL:
+							ret = point.GetInt64() >= limitValue;
+							break;
+						case THRESHOLD_LESS:
+							ret = point.GetInt64() < limitValue;
+							break;
+						case THRESHOLD_LESS_EQUAL:
+							ret = point.GetInt64() <= limitValue;
+							break;
+
 					}
 				}
 			}
@@ -326,7 +375,7 @@ bool OverMaxRule::checkLimit(const Value& point,
  * @return			True if evalution succeded,
  *				false otherwise.
  */
-bool OverMaxRule::evalAsset(const Value& assetValue,
+bool ThresholdRule::evalAsset(const Value& assetValue,
 			    RuleTrigger* rule)
 {
 	bool assetEval = false;
@@ -368,7 +417,7 @@ bool OverMaxRule::evalAsset(const Value& assetValue,
  *
  * @param    config	The configuration object to process
  */
-void OverMaxRule::configure(const ConfigCategory& config)
+void ThresholdRule::configure(const ConfigCategory& config)
 {
 	BuiltinRule* handle = (BuiltinRule *)m_instance;
 	string assetName = config.getValue("asset");
@@ -377,22 +426,27 @@ void OverMaxRule::configure(const ConfigCategory& config)
 	if (!assetName.empty() &&
 	    !dataPointName.empty())
 	{
-		// evaluation_type can be empty, it means latest value
-		string evaluation_type;
+		// evaluation_type can be empty, it means SingleItem values
+		string evaluation_data;
 		// time_window might be not present only
 		// if evaluation_type is empty
 		unsigned int timeInterval = atoi(DEFAULT_TIME_INTERVAL);
 
-		if (config.itemExists("evaluation_type"))
+		if (config.itemExists("evaluation_data"))
 		{
-			evaluation_type = config.getValue("evaluation_type");
-			if (evaluation_type.compare("latest") == 0)
+			evaluation_data = config.getValue("evaluation_data");
+			if (evaluation_data.compare("Single Item") == 0)
 			{
-				evaluation_type.clear();
+				evaluation_data.clear();
 				timeInterval = 0;
 			}
 			else
 			{
+				if (config.itemExists("window_data"))
+				{
+					evaluation_data = config.getValue("window_data");
+				}
+
 				if (config.itemExists("time_window"))
 				{
 					timeInterval = atoi(config.getValue("time_window").c_str());
@@ -406,7 +460,7 @@ void OverMaxRule::configure(const ConfigCategory& config)
 			DatapointValue value(maxVal);
 			Datapoint* point = new Datapoint(dataPointName, value);
 			RuleTrigger* pTrigger = new RuleTrigger(dataPointName, point);
-			pTrigger->addEvaluation(evaluation_type,
+			pTrigger->addEvaluation(evaluation_data,
 						timeInterval,
 						false);
 
@@ -426,4 +480,13 @@ void OverMaxRule::configure(const ConfigCategory& config)
 						   RULE_NAME);
 		}
 	}
+	string condition = config.getValue("condition");
+	if (condition.compare(">") == 0)
+		m_condition = THRESHOLD_GREATER;
+	else if (condition.compare(">=") == 0)
+		m_condition = THRESHOLD_GREATER_EQUAL;
+	else if (condition.compare("<") == 0)
+		m_condition = THRESHOLD_LESS;
+	else if (condition.compare("<=") == 0)
+		m_condition = THRESHOLD_LESS_EQUAL;
 }

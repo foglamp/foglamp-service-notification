@@ -8,8 +8,5 @@
 # build
 build
 
-# packaging
-packages/build
-
-# rpm packaging build
-archive/
+# Editor
+.idea/

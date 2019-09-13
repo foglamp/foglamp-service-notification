@@ -111,9 +111,16 @@ string RulePlugin::triggers()
 bool RulePlugin::eval(const string& assetValues)
 {
 	bool ret = false;
+	time_t start = time(0);
 	if (this->pluginEvalPtr)
 	{
 		ret = this->pluginEvalPtr(m_instance, assetValues);
+	}
+	int duration = time(0) - start;
+	if (duration > 5)
+	{
+		Logger::getLogger()->warn("Rule evaluation for %s was slow, %d seconds",
+				m_name.c_str(), duration);
 	}
 	return ret;
 }

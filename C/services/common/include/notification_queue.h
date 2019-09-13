@@ -56,10 +56,27 @@ class NotificationQueueElement
 
 		const std::string&	getAssetName() { return m_assetName; };
 		ReadingSet*		getAssetData() { return m_readings; };
+		void			queuedTimeCheck()
+					{
+						time_t now = time(0);
+						if (now - m_qTime > 5)
+						{
+							Logger::getLogger()->info("Notification data queued for %d seconds", now - m_qTime);
+						}
+						if (m_readings->getCount() > 0)
+						{
+							time_t readingT = (*m_readings)[0]->getUserTimestamp();
+							if (now - readingT > 10)
+							{
+								Logger::getLogger()->info("Notification data oldest reading is %d seconds old", now - readingT);
+							}
+						}
+					};
 
 	private:
 		std::string		m_assetName;
 		ReadingSet*		m_readings;
+		time_t			m_qTime;
 };
 
 /**
@@ -125,12 +142,12 @@ class NotificationQueue
 		void			setSumValues(std::map<std::string, ResultData>& result,
 						    const std::string& key,
 						    DatapointValue& val);
-		void			deliverNotification(NotificationRule* rule,
-							    const std::string& data);
 		void			aggregateData(std::vector<NotificationDataElement *>& readingsData,
 						      unsigned long size,
 						      EvaluationType::EVAL_TYPE type,
-						       std::map<std::string, std::string>& result);
+						      std::map<std::string, std::string>& result);
+		void			setSingleItemData(vector<NotificationDataElement *>& readingsData,
+							  map<string, AssetData>& results);
 
 	private:
 		/**
@@ -180,23 +197,24 @@ class NotificationQueue
 
 /**
  * This class keeps the result for Datapoint Min/Max/Avg
- * (as vData[0]) or multiple ones for Window
+ * (as vData[0]) or multiple ones for All
  */
 class ResultData
 {
 	public:
-		std::vector<Datapoint*>
-				vData;
+		std::vector<Datapoint*> vData;
 };
 
 /**
  * This class keeps the string results of an evaluated asset and its datapoints
+ * and a vector or Reading data for SingleItem evaluation type
  */
 class AssetData
 {
 	public:
 		EvaluationType::EVAL_TYPE
-				type;
-		std::string     sData;
+					type;
+		std::string     	sData;
+		std::vector<Reading*>	rData;
 };
 #endif

@@ -7,15 +7,28 @@ using namespace std;
 
 TEST(NotificationService, Instances)
 {
+EXPECT_EXIT({
 	string myName = "myName";
 
 	ManagementClient* managerClient = new ManagementClient("0.0.0.0", 0);
 	NotificationManager instances(myName, managerClient, NULL);
 
-	ASSERT_EQ(0, instances.getInstances().size());
-	string allInstances = "{ \"notifications\": [" + instances.getJSONInstances()  + "] }";
+	bool ret = instances.getInstances().size() == 0;
+	if (ret)
+	{
+		string allInstances = "{ \"notifications\": [" + instances.getJSONInstances()  + "] }";
 
-	ASSERT_EQ(0, instances.getJSONInstances().compare(""));
-
+		ret = instances.getJSONInstances().compare("") == 0;
+		if (!ret)
+		{
+			cerr << "Notification instances JSON array is not empty" << endl;
+		}
+	}
+	else
+	{
+		cerr << "Notification instances count is not 0" << endl;
+	}
 	delete managerClient;
+
+	exit(!(ret == true)); }, ::testing::ExitedWithCode(0), "");
 }

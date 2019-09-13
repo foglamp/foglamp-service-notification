@@ -8,21 +8,33 @@ using namespace std;
 
 TEST(NotificationService, GetPlugins)
 {
+EXPECT_EXIT({
 	string myName = "myName";
 
 	ManagementClient* managerClient = new ManagementClient("0.0.0.0", 0);
 	NotificationManager instances(myName, managerClient, NULL);
 
-	// Check for embedded OverMaxRule rule plugin
-	ASSERT_TRUE(instances.getJSONRules().find("OverMaxRule") != string::npos);
+	// Check for embedded Threshold rule plugin
+	bool ret = instances.getJSONRules().find("Threshold") != string::npos;
+	if (!ret)
+	{
+		delete managerClient;
+		cerr << "Embedded Threshold rule plugin not found" << endl;
+		exit(1);
+	}
 
-	// If FOGLAMP_ROOT is set we should have some delivery plugins
+	// If FOGLAMP_ROOT is not set we should no delivery plugins
 	if (!getenv("FOGLAMP_ROOT"))
 	{
-		ASSERT_EQ(0, instances.getJSONDelivery().compare("{}"));
+		ret = instances.getJSONDelivery().compare("[]") == 0;
+		if (!ret)
+		{
+			cerr << "Delivery plugin array must be empty without FOGLAMP_ROOT" << endl;
+		}
 	}
 	else
 	{
+		// If FOGLAMP_ROOT is set we should have some delivery plugins
 		string deliveryPluginDir(getenv("FOGLAMP_ROOT"));
 		deliveryPluginDir += "/plugins/notificationDelivery";
 		DIR* dir = opendir(deliveryPluginDir.c_str());
@@ -44,14 +56,24 @@ TEST(NotificationService, GetPlugins)
 		if (pluginsFound)
 		{
 			// Check array is NOT empty
-			ASSERT_TRUE(instances.getJSONDelivery().compare("[]") != 0);
+			ret = instances.getJSONDelivery().compare("[]") != 0;
+			if (!ret)
+			{
+				cerr << "Delivery plugin array can not be empty with found plugins" << endl;
+			}
 		}
 		else
 		{
 			// Check array must be empty
-			ASSERT_TRUE(instances.getJSONDelivery().compare("[]") == 0);
+			ret = instances.getJSONDelivery().compare("[]") == 0;
+			if (!ret)
+			{
+				cerr << "Delivery plugin array has to be empty without found plugins" << endl;
+			}
 		}
 	}
 
 	delete managerClient;
+
+	exit(!(ret == true)); }, ::testing::ExitedWithCode(0), "");
 }

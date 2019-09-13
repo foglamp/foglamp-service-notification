@@ -17,26 +17,24 @@
 #include <notification_service.h>
 #include <notification_stats.h>
 
-// Notification type repeat frequency
-#define DEFAULT_RETRIGGER_FREQUENCY 60
-#define DEFAULT_ONESHOT_FREQUENCY   60
-#define DEFAULT_TOGGLE_FREQUENCY    60
+// Notification type repeat time
+#define DEFAULT_RETRIGGER_TIME 60
 
 /**
  * The EvaluationType class represents
  * the evalutation type of notification data.
  *
- * Supported directives:  Window, Average, Minimum, Maximum
+ * Supported directives:  All, Average, Minimum, Maximum
  * with the specified time period
- * and Latest (without time indication)
+ * and Single Item (without time indication)
  * These informations come from "plugin_triggers" call.
  */
 class EvaluationType
 {
 	public:
 		typedef enum EvalType {
-			Latest,
-			Window,
+			SingleItem,
+			All,
 			Average,
 			Minimum,
 			Maximum
@@ -164,7 +162,12 @@ class NotificationDelivery : public NotificationElement
 class NotificationInstance
 {
 	public:
-		enum NotificationType { None, OneShot, Retriggered, Toggled };
+		enum eNotificationType { None, OneShot, Retriggered, Toggled };
+		struct NotificationType
+		{
+			eNotificationType type;
+			long retriggerTime;
+		};
 		enum NotificationState {StateTriggered, StateCleared };
 		NotificationInstance(const std::string& name,
 				     bool enable,
@@ -194,11 +197,22 @@ class NotificationInstance
 						    const std::string& category);
 		bool			updateInstance(const string& name,
 						       const ConfigCategory& config);
-		void			enable() { m_enable = true; };
-		void			disable() { m_enable = false; };
+		void			enable()
+					{
+						Logger::getLogger()->info("Notification %s enabled",
+								m_name.c_str());
+						m_enable = true;
+					};
+		void			disable()
+					{
+						Logger::getLogger()->info("Notification %s disabled",
+								m_name.c_str());
+						m_enable = false;
+					};
 		void			setType(NotificationType type) { m_type = type; }; 
 		void			markAsZombie() { m_zombie = true; };
 		bool			isZombie() { return m_zombie; };
+		NotificationState	getState() { return m_state; };
 
 	private:
 		const std::string	m_name;
@@ -212,6 +226,7 @@ class NotificationInstance
 };
 
 typedef NotificationInstance::NotificationType NOTIFICATION_TYPE;
+typedef NotificationInstance::eNotificationType E_NOTIFICATION_TYPE;
 typedef std::function<RulePlugin*(const std::string&)> BUILTIN_RULE_FN;
 
 class NotificationManager
@@ -225,18 +240,18 @@ class NotificationManager
 		const std::string&	getName() const { return m_name; };
 		static NotificationManager*
 					getInstance();
-		std::string		getJSONInstances() const;
+		std::string		getJSONInstances();
 		void 			loadInstances();
 		std::map<std::string, NotificationInstance *>&
 					getInstances() { return m_instances; };
 		NotificationInstance*	getNotificationInstance(const std::string& instanceName) const;
-		NOTIFICATION_TYPE	parseType(const std::string& type);
+		E_NOTIFICATION_TYPE	parseType(const std::string& type);
 		std::string		getJSONRules();
 		std::string		getJSONDelivery();
 		bool			APIcreateEmptyInstance(const std::string& name);
 		RulePlugin*		createRuleCategory(const std::string& name,
 							   const std::string& rule);
-		 DeliveryPlugin*	createDeliveryCategory(const std::string& name,
+		DeliveryPlugin*		createDeliveryCategory(const std::string& name,
 							       const std::string& delivery);
 		std::string		getPluginInfo(PLUGIN_INFORMATION* info);
 		bool			createInstance(const std::string& name,
@@ -271,6 +286,9 @@ class NotificationManager
 		RulePlugin*		createRulePlugin(const std::string& rulePluginName);
 		DeliveryPlugin*		createDeliveryPlugin(const std::string& deliveryPluginName);
 
+	public:
+		std::mutex		m_instancesMutex;
+
 	private:
 		const std::string	m_name;
 		static NotificationManager*
@@ -282,7 +300,6 @@ class NotificationManager
 					m_builtinRules;
 		NotificationService*	m_service;
 		Logger*			m_logger;
-		std::mutex		m_instancesMutex;
 		NotificationStats	m_stats;
 };
 #endif

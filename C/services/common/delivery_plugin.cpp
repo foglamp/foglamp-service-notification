@@ -103,6 +103,7 @@ bool DeliveryPlugin::deliver(const std::string& deliveryName,
 			     const std::string& message)
 {
 	bool ret = false;
+	time_t	start = time(0);
 	if (this->pluginDeliverPtr)
 	{
 		ret = this->pluginDeliverPtr(m_instance,
@@ -110,6 +111,12 @@ bool DeliveryPlugin::deliver(const std::string& deliveryName,
 					     notificationName,
 					     triggerReason,
 					     message);
+	}
+	unsigned int duration = time(0) - start;
+	if (duration > 5)
+	{
+		Logger::getLogger()->warn("Delivery of notification %s was slow, %d seconds",
+				notificationName.c_str(), duration);
 	}
 	return ret;
 }
