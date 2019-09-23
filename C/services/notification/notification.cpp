@@ -99,9 +99,6 @@ int main(int argc, char *argv[])
 			"proceeding in interactive mode." << endl;
 	}
 
-	// Requests the kernel to deliver SIGHUP when parent dies
-	prctl(PR_SET_PDEATHSIG, SIGHUP);
-
 	// We handle these signals, add more if needed
 	std::signal(SIGHUP,  signalHandler);
 	std::signal(SIGINT,  signalHandler);
