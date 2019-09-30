@@ -95,7 +95,10 @@ bool NotificationService::start(string& coreAddress,
 		sleep(1);
 	}
 
-	// Start the NotificationApi on service port
+        // Enable http API methods
+        m_api->initResources();
+
+        // Start the NotificationApi on service port
 	m_api->start();
 
 	// Allow time for the listeners to start before we continue
@@ -104,8 +107,6 @@ bool NotificationService::start(string& coreAddress,
 		sleep(1);
 	}
 
-	// Enable http API methods
-	m_api->initResources();
 	// Set Notification callback url prefix
 	m_api->setCallBackURL();
 
