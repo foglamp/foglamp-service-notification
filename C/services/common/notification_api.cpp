@@ -9,11 +9,13 @@
  */
 #include "client_http.hpp"
 #include "server_http.hpp"
+#include "string_utils.h"
 #include "notification_api.h"
 #include "management_api.h"
 #include "notification_manager.h"
 #include "notification_subscription.h"
 #include "notification_queue.h"
+
 
 NotificationApi* NotificationApi::m_instance = 0;
 
@@ -339,7 +341,8 @@ void NotificationApi::processCallback(shared_ptr<HttpServer::Response> response,
 {
 	try
 	{
-		string assetName = request->path_match[ASSET_NAME_COMPONENT];
+		// URL decode assetName
+		string assetName = urlDecode(request->path_match[ASSET_NAME_COMPONENT]);
 		string payload = request->content.string();
 		string responsePayload;
 
@@ -444,7 +447,7 @@ void NotificationApi::getNotificationObject(NOTIFICATION_OBJECT object,
 		case ObjCreateNotification:
 			{
 				string name = request->path_match[NOTIFICATION_NAME_COMPONENT];
-				bool ret = this->createNotification(decodeName(name));
+				bool ret = this->createNotification(urlDecode(name));
 				responsePayload = ret ?
 						  "{\"message\": \"created\"}" :
 						  "{\"error\": \"create notification failure\"}";
@@ -455,7 +458,7 @@ void NotificationApi::getNotificationObject(NOTIFICATION_OBJECT object,
 			{
 				string name = request->path_match[NOTIFICATION_NAME_COMPONENT];
 				string rule = request->path_match[RULE_NAME_COMPONENT];
-				bool ret = this->createNotificationRule(decodeName(name), rule);
+				bool ret = this->createNotificationRule(urlDecode(name), rule);
 				responsePayload = ret ?
 						 "{\"message\": \"created\"}" :
 						 "{\"error\": \"create rule failure\"}";
@@ -466,7 +469,7 @@ void NotificationApi::getNotificationObject(NOTIFICATION_OBJECT object,
 			{
 				string name = request->path_match[NOTIFICATION_NAME_COMPONENT];
 				string delivery = request->path_match[DELIVERY_NAME_COMPONENT];
-				bool ret = this->createNotificationDelivery(decodeName(name), delivery);
+				bool ret = this->createNotificationDelivery(urlDecode(name), delivery);
 				responsePayload = ret ?
 						 "{\"message\": \"created\"}" :
 						  "{\"error\": \"create delivery failure\"}";;
@@ -475,7 +478,7 @@ void NotificationApi::getNotificationObject(NOTIFICATION_OBJECT object,
 		case ObjDeleteNotification:
 			{
 				string name = request->path_match[NOTIFICATION_NAME_COMPONENT];
-				bool ret = this->removeNotification(decodeName(name));
+				bool ret = this->removeNotification(urlDecode(name));
 				responsePayload = ret ?
 						  "{\"message\": \"deleted\"}" :
 						  "{\"error\": \"delete notification failure\"}";
@@ -627,45 +630,4 @@ bool NotificationApi::ishex (const char c)
 	{
 		return false;
 	}
-}
-
-/**
- * URL decode of a given string
- *
- * @param name	The string to decode
- * @return	The URL decoded string
- *
- * In case of decoding errors the routine returns
- * current decoded string
- */
-string NotificationApi::decodeName(const std::string& name)
-{
-	std::string decoded(name);
-	char* s = (char *)name.c_str();
-	char* dec = (char *)decoded.c_str();
-	char* o;
-	const char* end = s + name.length();
-	int c;
-
-	for (o = dec; s <= end; o++)
-	{
-		c = *s++;
-		if (c == '+')
-		{
-			c = ' ';
-		}
-		else if (c == '%' && (!ishex(*s++) ||
-			 !ishex(*s++) ||
-			 !sscanf(s - 2, "%2x", &c)))
-		{
-			break;
-		}
-
-		if (dec)
-		{
-			*o = c;
-		}
-	}
-
-	return string(dec);
 }
