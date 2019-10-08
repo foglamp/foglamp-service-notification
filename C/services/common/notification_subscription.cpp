@@ -16,6 +16,7 @@
 #include <logger.h>
 #include <iostream>
 #include <string>
+#include <string_utils.h>
 #include <notification_subscription.h>
 #include <notification_api.h>
 #include <notification_queue.h>
@@ -92,7 +93,7 @@ void NotificationSubscription::unregisterSubscriptions()
 	{
 		// Unregister interest
 		m_storage.unregisterAssetNotification((*it).first,
-						      callBackURL + (*it).first);
+						      callBackURL + urlEncode((*it).first));
 		m_logger->info("Unregistering asset '" + \
 			       (*it).first + "' for notification " + \
 			       this->getNotificationName());
@@ -180,7 +181,7 @@ bool NotificationSubscription::addSubscription(const std::string& assetName,
 	if (m_subscriptions[assetName].size() == 1)
 	{
 		m_storage.registerAssetNotification(assetName,
-						    (callBackURL + assetName));
+						    (callBackURL + urlEncode(assetName)));
 
 		m_logger->info("Registering asset '" + \
 			       assetName + "' for notification " + \
@@ -251,7 +252,7 @@ void NotificationSubscription::unregisterSubscription(const string& assetName)
 	{
 		// Unregister interest
 		m_storage.unregisterAssetNotification((*it).first,
-						      callBackURL + assetName);
+						      callBackURL + urlEncode(assetName));
 
 		m_logger->info("Unregistering asset '" + \
 				assetName + "' for notification " + \
