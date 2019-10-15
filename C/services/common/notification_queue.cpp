@@ -1009,7 +1009,7 @@ void NotificationQueue::processAllBuffers(vector<NotificationDataElement *>& rea
 		lock_guard<mutex> guard(m_bufferMutex);
 		this->keepBufferData(ruleName,
 				     assetName,
-				     readingsData.size() - (buffersDone - 1));
+				     readingsData.size() - buffersDone);
 	}
 }
 
