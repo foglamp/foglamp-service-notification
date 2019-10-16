@@ -74,6 +74,7 @@ static const char *default_config = QUOTE({
 				"options": [ "Maximum", "Minimum", "Average"],
 				"default" : "Average",
 				"displayName" : "Window evaluation",
+				"validity" : "evaluation_data != \"Single Item\"",
 				"order": "6"
 				},
 			"time_window" : {
@@ -81,6 +82,7 @@ static const char *default_config = QUOTE({
 				"type": "integer",
 				"default": DEFAULT_TIME_INTERVAL, 
 				"displayName" : "Time window",
+				"validity" : "evaluation_data != \"Single Item\"",
 				"order": "7"
 				}
 	});
