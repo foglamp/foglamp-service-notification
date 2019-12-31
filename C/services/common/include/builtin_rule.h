@@ -15,6 +15,9 @@
 #include <management_client.h>
 #include <rule_plugin.h>
 
+#define DATETIME_MAX_LEN 52
+#define MICROSECONDS_FORMAT_LEN 10
+#define DATETIME_FORMAT_DEFAULT "%Y-%m-%d %H:%M:%S"
 /**
  * This class represents the basic notification trigger:
  * for given asset name we set evaluation_type,
@@ -76,6 +79,63 @@ class BuiltinRule
 {
 	public:
 		typedef enum { StateCleared, StateTriggered } TRIGGER_STATE;
+		class TriggerInfo
+		{
+
+			public:
+				TriggerInfo()
+				{
+					// Store seconds and microseconds
+					gettimeofday(&m_timestamp, NULL);
+					// Create datetime UTC string with microseconds
+					setUTCDateTimeMicro();
+					Logger::getLogger()->error("TriggerInfo =%s", m_dateTimeUTC.c_str());
+				};
+
+				TRIGGER_STATE
+					getState() const { return m_state; };
+				const std::string&
+					getAssets() const { return m_assets; };
+				const std::string&
+					getUTCDateTime() const { return m_dateTimeUTC; };
+				void	getUTCTimestamp(struct timeval *tm) { *tm = m_timestamp; };
+
+			private:
+				void setUTCDateTimeMicro()
+				{
+					// Populate tm structure with UTC time
+					struct tm timeinfo;
+					gmtime_r(&m_timestamp.tv_sec, &timeinfo);
+					char date_time[DATETIME_MAX_LEN];
+
+					// Create datetime with seconds
+					std::strftime(date_time,
+						      sizeof(date_time),
+						      DATETIME_FORMAT_DEFAULT,
+						      &timeinfo);
+					m_dateTimeUTC = date_time;
+
+					char micro_s[MICROSECONDS_FORMAT_LEN];
+					// Add microseconds
+					snprintf(micro_s,
+						sizeof(micro_s),
+						".%06lu",
+						m_timestamp.tv_usec);
+
+					m_dateTimeUTC.append(micro_s);
+
+					// Add UTC offset
+					m_dateTimeUTC.append("+00:00");
+				}
+			
+			public:
+				TRIGGER_STATE		m_state;
+				std::string		m_assets;
+			private:
+				std::string		m_dateTimeUTC;
+				struct timeval		m_timestamp;
+		};
+				
 		BuiltinRule() { m_state = StateCleared; };
 		~BuiltinRule()
 		{
@@ -112,6 +172,25 @@ class BuiltinRule
 				  BuiltinRule::StateCleared;
 		};
 		TRIGGER_STATE	getState() const { return m_state; };
+		void		getFullState(BuiltinRule::TriggerInfo &state) const
+		{
+			// Set state
+			state.m_state = m_state;
+
+			// Add all assets belonging to the rule
+			state.m_assets = "[";
+			for (auto r = m_triggers.begin();
+				  r != m_triggers.end();
+				  ++r)
+			{
+				state.m_assets.append("\"" + (*r).first + "\"");
+				if (next(r, 1) != m_triggers.end())
+				{
+					state.m_assets.append(", ");
+				}
+			}
+			state.m_assets.append("]");
+		};
 
 	private:
 		TRIGGER_STATE		m_state;

@@ -261,10 +261,15 @@ bool ThresholdRule::eval(const string& assetValues)
 string ThresholdRule::reason() const
 {
 	BuiltinRule* handle = (BuiltinRule *)m_instance;
+	// Get state, assets and timestamp
+	BuiltinRule::TriggerInfo info;
+	handle->getFullState(info);
 
 	string ret = "{ \"reason\": \"";
-	ret += handle->getState() == BuiltinRule::StateTriggered ? "triggered" : "cleared";
-	ret += "\" }";
+	ret += info.getState() == BuiltinRule::StateTriggered ? "triggered" : "cleared";
+	ret += "\"";
+	ret += ", \"asset\": " + info.getAssets() + ", \"timestamp\": \"" + info.getUTCDateTime() + "\"";
+	ret += " }";
 
 	return ret;
 }
