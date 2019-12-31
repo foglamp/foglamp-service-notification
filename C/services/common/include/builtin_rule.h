@@ -89,7 +89,6 @@ class BuiltinRule
 					gettimeofday(&m_timestamp, NULL);
 					// Create datetime UTC string with microseconds
 					setUTCDateTimeMicro();
-					Logger::getLogger()->error("TriggerInfo =%s", m_dateTimeUTC.c_str());
 				};
 
 				TRIGGER_STATE
