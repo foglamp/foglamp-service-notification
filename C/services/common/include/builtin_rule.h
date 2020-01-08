@@ -85,10 +85,6 @@ class BuiltinRule
 			public:
 				TriggerInfo()
 				{
-					// Store seconds and microseconds
-					gettimeofday(&m_timestamp, NULL);
-					// Create datetime UTC string with microseconds
-					setUTCDateTimeMicro();
 				};
 
 				TRIGGER_STATE
@@ -96,15 +92,11 @@ class BuiltinRule
 				const std::string&
 					getAssets() const { return m_assets; };
 				const std::string&
-					getUTCDateTime() const { return m_dateTimeUTC; };
-				void	getUTCTimestamp(struct timeval *tm) { *tm = m_timestamp; };
-
-			private:
-				void setUTCDateTimeMicro()
+					getUTCTimestamp() const { return m_dateTimeUTC; };
+				void	setUTCTimestamp(struct timeval tv)
 				{
-					// Populate tm structure with UTC time
 					struct tm timeinfo;
-					gmtime_r(&m_timestamp.tv_sec, &timeinfo);
+					gmtime_r(&tv.tv_sec, &timeinfo);
 					char date_time[DATETIME_MAX_LEN];
 
 					// Create datetime with seconds
@@ -119,23 +111,21 @@ class BuiltinRule
 					snprintf(micro_s,
 						sizeof(micro_s),
 						".%06lu",
-						m_timestamp.tv_usec);
+						tv.tv_usec);
 
 					m_dateTimeUTC.append(micro_s);
 
 					// Add UTC offset
 					m_dateTimeUTC.append("+00:00");
 				}
-			
+
 			public:
 				TRIGGER_STATE		m_state;
 				std::string		m_assets;
-			private:
 				std::string		m_dateTimeUTC;
-				struct timeval		m_timestamp;
 		};
 				
-		BuiltinRule() { m_state = StateCleared; };
+		BuiltinRule() { m_state = StateCleared; m_evalTimestamp = {}; };
 		~BuiltinRule()
 		{
 			// Delete all triggers
@@ -170,6 +160,17 @@ class BuiltinRule
 				  BuiltinRule::StateTriggered :
 				  BuiltinRule::StateCleared;
 		};
+		void		setEvalTimestamp(double timestamp)
+		{
+			double whole;
+			m_evalTimestamp.tv_sec = (unsigned long)timestamp;
+			double fractional = modf(timestamp, &whole);
+			m_evalTimestamp.tv_usec = fractional * 1000000;
+		};
+		bool		getEvalTimestamp()
+		{
+			return (m_evalTimestamp.tv_sec > 0);
+		};
 		TRIGGER_STATE	getState() const { return m_state; };
 		void		getFullState(BuiltinRule::TriggerInfo &state) const
 		{
@@ -189,10 +190,14 @@ class BuiltinRule
 				}
 			}
 			state.m_assets.append("]");
+
+			// Set timestamp
+			state.setUTCTimestamp(m_evalTimestamp);
 		};
 
 	private:
 		TRIGGER_STATE		m_state;
+		struct timeval		m_evalTimestamp;
 		std::map<std::string, RuleTrigger *>
 					m_triggers;
 		

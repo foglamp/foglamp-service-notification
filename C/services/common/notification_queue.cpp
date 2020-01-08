@@ -766,6 +766,14 @@ bool NotificationQueue::processAllReadings(NotificationDetail& info,
 	bool evalRule = false;
 	string assetName = info.getAssetName();
 	string ruleName = info.getRuleName();
+	// Get last object in the buffers
+	auto c = readingsData.back();
+	vector<Reading *>*s = c->getData()->getAllReadingsPtr();
+	// Get last reading data
+	auto r = s->back();
+	struct timeval tm;
+	// Save reading timestamp
+	r->getTimestamp(&tm);
 
 #ifdef QUEUE_DEBUG_DATA
 	// check
@@ -839,6 +847,9 @@ bool NotificationQueue::processAllReadings(NotificationDetail& info,
 			}
 			content += " }";
 
+			// Add timestamp_assetName with reading timestamp
+			content += ", \"timestamp_" + assetName + "\" : " + to_string(tm.tv_sec) + "." + to_string(tm.tv_usec);
+ 
 			// Set result
 			results[assetName].type = info.getType();
 			results[assetName].sData = content;
@@ -1487,6 +1498,12 @@ static void deliverData(NotificationRule* rule,
 			}
 			// close datapoints
 			assetValue += " }";
+
+			// Get reading timestamp
+			struct timeval tm;
+			(*eq).second->getTimestamp(&tm);
+			// Add timestamp_assetName with reading timestamp
+			assetValue += ", \"timestamp_" + assetName + "\" : " + to_string(tm.tv_sec) + "." + to_string(tm.tv_usec);
 
 			// Save asset value:
 			// if assetName is not found in next point in time
