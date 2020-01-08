@@ -281,7 +281,7 @@ string ThresholdRule::reason() const
 	ret += ", \"asset\": " + info.getAssets();
 	if (handle->getEvalTimestamp())
 	{
-		ret += string(", \"timestamp\": \"") + info.getUTCTimestamp() + string("\"");
+		ret += ", \"timestamp\": \"" + info.getUTCTimestamp() + "\"";
 	}
 
 	ret += " }";
