@@ -233,6 +233,8 @@ bool ThresholdRule::eval(const string& assetValues)
 		  ++t)
 	{
 		string assetName = (*t).first;
+		string assetTimestamp = "timestamp_" + assetName;
+
 		if (!doc.HasMember(assetName.c_str()))
 		{
 			eval = false;
@@ -244,6 +246,14 @@ bool ThresholdRule::eval(const string& assetValues)
 
 			// Set evaluation
 			eval = this->evalAsset(assetValue, (*t).second);
+
+			// Add evalution timestamp
+			if (doc.HasMember(assetTimestamp.c_str()))
+			{
+				const Value& assetTime = doc[assetTimestamp.c_str()];
+				double timestamp = assetTime.GetDouble();
+				handle->setEvalTimestamp(timestamp);
+			}
 		}
 	}
 
@@ -261,10 +271,20 @@ bool ThresholdRule::eval(const string& assetValues)
 string ThresholdRule::reason() const
 {
 	BuiltinRule* handle = (BuiltinRule *)m_instance;
+	// Get state, assets and timestamp
+	BuiltinRule::TriggerInfo info;
+	handle->getFullState(info);
 
 	string ret = "{ \"reason\": \"";
-	ret += handle->getState() == BuiltinRule::StateTriggered ? "triggered" : "cleared";
-	ret += "\" }";
+	ret += info.getState() == BuiltinRule::StateTriggered ? "triggered" : "cleared";
+	ret += "\"";
+	ret += ", \"asset\": " + info.getAssets();
+	if (handle->getEvalTimestamp())
+	{
+		ret += ", \"timestamp\": \"" + info.getUTCTimestamp() + "\"";
+	}
+
+	ret += " }";
 
 	return ret;
 }
