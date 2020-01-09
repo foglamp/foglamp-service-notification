@@ -1462,7 +1462,14 @@ static void deliverData(NotificationRule* rule,
 			const std::multimap<uint64_t, Reading*>& itemData,
 			const map<string, string>& readyData)
 {
+	map<string, bool> assets;
 	map<string, string> values;
+
+	// Get number of assets in the multimap first
+	for (auto a = itemData.begin(); a != itemData.end(); ++a)
+	{
+		assets[(*a).second->getAssetName()] = true;
+	}
 
 	// We have SingleItem data to evaluate
 	string evalJSON = "{ ";
@@ -1533,7 +1540,10 @@ static void deliverData(NotificationRule* rule,
 		}
 		output += " }" ;
 
-		// Call plugin_eval, plugin_reason and plugin_deliver
-		deliverNotification(rule, output);
+		// If all assets are available call plugin_eval, plugin_reason and plugin_deliver
+		if (assets.size() == values.size())
+		{
+			deliverNotification(rule, output);
+		}
 	}
 }
