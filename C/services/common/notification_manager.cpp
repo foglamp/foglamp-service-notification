@@ -32,6 +32,14 @@ void ingestCB(NotificationService *service, Reading *reading)
 {
 	service->ingestReading(*reading);
 }
+ManagementClient* getManagementClient(NotificationService *service)
+{
+	return service->getManagementClient();
+}
+StorageClient* getStorageClient(NotificationService *service)
+{
+	return service->getStorageClient();
+}
 };
 
 NotificationManager* NotificationManager::m_instance = 0;
@@ -1161,10 +1169,28 @@ bool NotificationManager::setupInstance(const string& name,
 		// and instantiate  NotificationDelivery class
 		if (deliver->init(deliveryConfig))
 		{
+			// Check and set registerIngest
 			if (deliver->ingestData())
 			{
 				deliver->registerIngest((void *)ingestCB, (void *)m_service);
 			}
+
+			// Check and set the ManagementClient
+			if (deliver->getManagement())
+			{
+				deliver->registerManagementClient((void *)getManagementClient, (void *)m_service);
+			}
+
+			// Check and set the StorageClient
+			if (deliver->getStorage())
+			{
+				deliver->registerStorageClient((void *)getStorageClient, (void *)m_service);
+			}
+
+			// Call Plugin start: this might activate other plugin functionalities enabled above
+			deliver->start();
+
+			// Now create NotificationDelivery object
 			theDelivery = new NotificationDelivery(deliveryCategoryName,
 								notificationName,
 								deliver,

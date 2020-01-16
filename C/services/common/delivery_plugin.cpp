@@ -38,6 +38,10 @@ DeliveryPlugin::DeliveryPlugin(const std::string& name,
 					 manager->resolveSymbol(handle,
 								"plugin_reconfigure");
 
+	pluginStartPtr = (void (*)(PLUGIN_HANDLE))
+				   manager->resolveSymbol(handle,
+							  "plugin_start");
+
 	// Persist data initialised
 	m_plugin_data = NULL;
 
@@ -152,5 +156,52 @@ void DeliveryPlugin::setEnabled(const ConfigCategory& config)
 
 		Logger::getLogger()->debug("DeliveryPlugin::setEnabled = %d",
 					   m_enabled);
+	}
+}
+
+/**
+ * Call plugin_start
+ */
+void DeliveryPlugin::start()
+{
+	if (pluginStartPtr != NULL)
+	{
+		this->pluginStartPtr(m_instance);
+	}
+}
+
+/**
+ * Register configuration manager client
+ *
+ * @param func  The function to call
+ * @param data  First argument to pass to above function
+ */
+void DeliveryPlugin::registerManagementClient(void *func, void *data)
+{
+	void (*pluginRegisterMngrClient)(PLUGIN_HANDLE, void *, void *) =
+		(void (*)(PLUGIN_HANDLE, void *, void *))
+		manager->resolveSymbol(handle, "plugin_registerManagementClient");
+
+	if (pluginRegisterMngrClient != NULL)
+	{
+		(*pluginRegisterMngrClient)(m_instance, func, data);
+	}
+}
+
+/**
+ * Register storage client
+ *
+ * @param func  The function to call
+ * @param data  First argument to pass to above function
+ */
+void DeliveryPlugin::registerStorageClient(void *func, void *data)
+{
+	void (*pluginRegisterStorageClient)(PLUGIN_HANDLE, void *, void *) =
+		(void (*)(PLUGIN_HANDLE, void *, void *))
+		manager->resolveSymbol(handle, "plugin_registerStorageClient");
+
+	if (pluginRegisterStorageClient != NULL)
+	{
+		(*pluginRegisterStorageClient)(m_instance, func, data);
 	}
 }
