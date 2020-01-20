@@ -342,7 +342,6 @@ void NotificationService::configChange(const string& categoryName,
 			notifications->createInstance(categoryName, category);
 		}
 		return;
-			
 	}
 	else
 	{

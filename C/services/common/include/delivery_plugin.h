@@ -12,7 +12,6 @@
 #include <plugin.h>
 #include <plugin_manager.h>
 #include <config_category.h>
-#include <management_client.h>
 #include <plugin_data.h>
 
 // DeliveryPlugin class
@@ -28,6 +27,11 @@ class DeliveryPlugin : public Plugin
 		void			shutdown();
 		bool			persistData() { return info->options & SP_PERSIST_DATA; };
 		bool			ingestData() { return info->options & SP_INGEST; };
+		bool			getService()
+		{
+			return (info->options & SP_GET_MANAGEMENT ||
+				info->options & SP_GET_STORAGE);
+		};
 		void			start();
 		bool			deliver(const std::string& deliveryName,
 						const std::string& notificationName,
@@ -35,6 +39,7 @@ class DeliveryPlugin : public Plugin
 						const std::string& customText);
 		void				reconfigure(const std::string& newConfig);
 		void			registerIngest(void *func, void *data);
+		void			registerService(void *func, void *data);
 		bool			isEnabled() { return m_enabled; };
 
 	private:
@@ -47,6 +52,7 @@ class DeliveryPlugin : public Plugin
 							    const std::string&);
 		void			(*pluginReconfigurePtr)(PLUGIN_HANDLE,
 							        const std::string& newConfig);
+		void			(*pluginStartPtr)(PLUGIN_HANDLE);
 		void			setEnabled(const ConfigCategory& config);
 
 	public:
