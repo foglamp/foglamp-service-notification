@@ -38,6 +38,10 @@ DeliveryPlugin::DeliveryPlugin(const std::string& name,
 					 manager->resolveSymbol(handle,
 								"plugin_reconfigure");
 
+	pluginStartPtr = (void (*)(PLUGIN_HANDLE))
+				   manager->resolveSymbol(handle,
+							  "plugin_start");
+
 	// Persist data initialised
 	m_plugin_data = NULL;
 
@@ -152,5 +156,34 @@ void DeliveryPlugin::setEnabled(const ConfigCategory& config)
 
 		Logger::getLogger()->debug("DeliveryPlugin::setEnabled = %d",
 					   m_enabled);
+	}
+}
+
+/**
+ * Call plugin_start
+ */
+void DeliveryPlugin::start()
+{
+	if (pluginStartPtr != NULL)
+	{
+		this->pluginStartPtr(m_instance);
+	}
+}
+
+/**
+ * Register service
+ *
+ * @param func  The function to call
+ * @param data  First argument to pass to above function
+ */
+void DeliveryPlugin::registerService(void *func, void *data)
+{
+	void (*pluginRegisterService)(PLUGIN_HANDLE, void *, void *) =
+		(void (*)(PLUGIN_HANDLE, void *, void *))
+		manager->resolveSymbol(handle, "plugin_registerService");
+
+	if (pluginRegisterService != NULL)
+	{
+		(*pluginRegisterService)(m_instance, func, data);
 	}
 }

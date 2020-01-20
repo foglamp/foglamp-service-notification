@@ -32,6 +32,10 @@ void ingestCB(NotificationService *service, Reading *reading)
 {
 	service->ingestReading(*reading);
 }
+NotificationService *getService(NotificationService *service)
+{
+	return service;
+}
 };
 
 NotificationManager* NotificationManager::m_instance = 0;
@@ -1161,10 +1165,22 @@ bool NotificationManager::setupInstance(const string& name,
 		// and instantiate  NotificationDelivery class
 		if (deliver->init(deliveryConfig))
 		{
+			// Check and set registerIngest
 			if (deliver->ingestData())
 			{
 				deliver->registerIngest((void *)ingestCB, (void *)m_service);
 			}
+
+			// Check and set the NotificationService class
+			if (deliver->getService())
+			{
+				deliver->registerService((void *)getService, (void *)m_service);
+
+				// Call Plugin start
+				deliver->start();
+			}
+
+			// Now create NotificationDelivery object
 			theDelivery = new NotificationDelivery(deliveryCategoryName,
 								notificationName,
 								deliver,
