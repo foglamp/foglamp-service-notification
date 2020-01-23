@@ -22,6 +22,7 @@
 #include <notification_api.h>
 #include <notification_subscription.h>
 #include <notification_queue.h>
+#include <delivery_queue.h>
 
 using namespace std;
 
@@ -1199,6 +1200,9 @@ static void deliverNotification(NotificationRule* rule,
 	NotificationInstance* instance =
 		instances->getNotificationInstance(rule->getNotificationName());
 
+	// Get delivery queue object
+	DeliveryQueue* dQueue = DeliveryQueue::getInstance();
+
 	// Get notification action
 	bool handleRule = instance->handleState(evalRule);
 	if (handleRule)
@@ -1231,12 +1235,21 @@ static void deliverNotification(NotificationRule* rule,
 			Logger::getLogger()->info("Notification %s will be delivered with reason %s",
 					rule->getNotificationName().c_str(), reason.c_str());
 			string customText = instance->getDelivery()->getText();
-			bool retCode = plugin->deliver(instance->getDelivery()->getName(),
+
+			// Create data object for delivery queue
+			DeliveryDataElement* deliveryData =
+				new DeliveryDataElement(instance->getDelivery()->getName(),
 							instance->getDelivery()->getNotificationName(),
 							reason,
 							(customText.empty() ?
 							"ALERT for " + rule->getName() :
-							customText));
+							customText),
+							instance);
+
+			// Add data object to the queue
+			DeliveryQueueElement* queueElement = new DeliveryQueueElement(deliveryData);
+			dQueue->addElement(queueElement);
+							 
 			// Audit log
 			instances->auditNotification(instance->getName(), reason);
 			// Update sent notification statistics
