@@ -24,6 +24,7 @@
 #include <notification_subscription.h>
 #include <notification_queue.h>
 #include <reading.h>
+#include <delivery_queue.h>
 
 using namespace std;
 
@@ -133,9 +134,25 @@ NotificationDelivery::NotificationDelivery(const std::string& name,
  */
 NotificationDelivery::~NotificationDelivery()
 {
-	// Free plugin resources
-	m_plugin->shutdown();
-	delete m_plugin;
+	// Get delivery queue object
+	DeliveryQueue* dQueue = DeliveryQueue::getInstance();
+
+	// Create data object for delivery queue
+	// with no reason, no message and notifcation instance set to NULL
+	// This elemet added to delivery queue will signal the need of stutting down
+	// the DeliveryPlugin after processing all data for this Delivery
+	DeliveryDataElement* deliveryData =
+		new DeliveryDataElement(this->getName(),
+					this->getNotificationName(),
+					"",
+					"",
+					NULL);
+
+	// Add data object to the queue
+	DeliveryQueueElement* queueElement = new DeliveryQueueElement(deliveryData);
+	dQueue->addElement(queueElement);
+
+	// We don't call plugin resources removal here.
 }
 
 /**
