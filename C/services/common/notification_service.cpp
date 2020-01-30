@@ -23,6 +23,7 @@
 #include <notification_manager.h>
 #include <notification_queue.h>
 #include <notification_subscription.h>
+#include <delivery_queue.h>
 
 using namespace std;
 
@@ -142,6 +143,13 @@ bool NotificationService::start(string& coreAddress,
 	notificationServerConfig.addItem("logLevel", "Minimum logging level reported",
                         "warning", "warning", logLevels);
 	notificationServerConfig.setItemDisplayName("logLevel", "Minimum Log Level");
+
+	notificationServerConfig.addItem("deliveryThreads",
+					 "Maximum number of notification delivery threads",
+					 "integer", "2", "2");
+	notificationServerConfig.setItemDisplayName("deliveryThreads",
+						    "Maximun number of delivery threads");
+	
 	if (!m_managerClient->addCategory(notificationServerConfig, true))
 	{
 		m_logger->fatal("Notification service '" + m_name + \
@@ -185,6 +193,15 @@ bool NotificationService::start(string& coreAddress,
 		m_logger->setMinLevel(category.getValue("logLevel"));
 	}
 
+	if (category.itemExists("deliveryThreads"))
+	{
+		m_delivery_threads = atoi(category.getValue("deliveryThreads").c_str());
+	}
+	if (!m_delivery_threads)
+	{
+		m_delivery_threads = DEFAULT_DELIVERY_WORKER_THREADS;
+	}
+
 	// Get Storage service
 	ServiceRecord storageInfo("FogLAMP Storage");
 	if (!m_managerClient->getService(storageInfo))
@@ -219,8 +236,10 @@ bool NotificationService::start(string& coreAddress,
 					"{\"name\": \"" + m_name + "\"}");
 
 	// We have notitication instances loaded
-	// (1) Start the NotificationQueue
+	// (1.1) Start the NotificationQueue
+	// (1.2) Start the DeliveryQueue
 	NotificationQueue queue(m_name);
+	DeliveryQueue dQueue(m_name, m_delivery_threads);
 
 	// (2) Register notification interest, per assetName:
 	// by call Storage layer Notification API.
@@ -246,8 +265,9 @@ bool NotificationService::start(string& coreAddress,
 	// Stop management API
 	m_managementApi->stop();
 
-	// Flush all data in the queue
+	// Flush all data in the queues
 	queue.stop();
+	dQueue.stop();
 
 	m_logger->info("Notification service '" + m_name + "' shutdown completed.");
 
