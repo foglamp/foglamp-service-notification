@@ -407,12 +407,6 @@ void DeliveryQueue::process(int num)
  */
 void DeliveryQueue::processDelivery(DeliveryQueueElement* elem)
 {
-
-	if (elem->getName().compare("deliveryB") == 0)
-	{
-		std::this_thread::sleep_for (std::chrono::milliseconds(5200));
-	}
-
 	// Get instances
 	NotificationManager* instances = NotificationManager::getInstance();
 
